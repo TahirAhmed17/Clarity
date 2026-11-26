@@ -27,7 +27,7 @@ npm run eval:engines    # engine evaluation; engines without keys are reported a
 | `tsc --noEmit`, `eslint` | ✅ 0 errors, 0 warnings |
 | `vitest run` | ✅ **62 / 62 passed**, 4 files |
 | `next build` | ✅ |
-| Migrations on **real Supabase Postgres 17** (`supabase db start`) | ✅ all 7 migrations applied, including pgvector in the `extensions` schema and every RLS migration |
+| Migrations on **real Supabase Postgres 17** (`supabase db start`) | ✅ all 8 migrations applied from scratch (`supabase db reset`), including pgvector in the `extensions` schema and every RLS migration |
 | RLS on real Supabase (`authenticated` role with JWT claims) | ✅ the owner sees only their 9 results and 1 profile; `anon` sees 0 health rows but can read the shared events |
 | Retrieval benchmark | ✅ see [docs/RETRIEVAL_BENCHMARK.md](docs/RETRIEVAL_BENCHMARK.md) |
 | Engine evaluation | Mock: 4/4 cases OK (correct flag, no dose in output, 0 unsupplied citations, next move matches). **Gemini and LingSante: skipped, no API keys.** |
@@ -65,6 +65,7 @@ npm run eval:engines    # engine evaluation; engines without keys are reported a
 3. **Question-specific evidence crowded out** by recommendation evidence. Fixed with a slot budget.
 4. **Non-atomic goal update.** A goal could change without its timeline note being written. Now transactional, with a test.
 5. **Stale instances on dev hot reload.** Cached repositories and retrievers kept old methods. Only state is cached now.
+6. **Advisor finding on production (M1)**: RLS helper functions were callable over RPC. Hardened in a new migration and verified on Supabase PG17 (see SECURITY.md).
 
 ### Not tested yet (M2)
 
