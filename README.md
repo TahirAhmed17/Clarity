@@ -33,7 +33,7 @@ Demo flow:
 
 ```bash
 cp .env.example .env.local      # set DATABASE_URL
-npm run db:migrate              # applies ./drizzle migrations
+npm run db:migrate              # applies supabase/migrations
 npm run db:seed                 # idempotent synthetic seed
 ```
 
