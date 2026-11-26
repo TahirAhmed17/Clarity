@@ -49,6 +49,14 @@ export interface Biomarker {
   source: RecordSource;
   confidence: number | null;
   pageNumber: number | null;
+  /** Present when the user corrected this record; holds the original extracted values. */
+  correction?: { original: { valueText: string; unitAsReported: string | null; refText: string | null; source: string }; correctedAt: string } | null;
+}
+
+export interface BiomarkerCorrectionInput {
+  valueText: string;
+  unitAsReported: string | null;
+  refText: string | null;
 }
 
 export type NewBiomarker = Omit<Biomarker, "id" | "profileId">;

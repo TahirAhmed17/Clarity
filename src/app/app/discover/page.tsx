@@ -58,7 +58,7 @@ async function DiscoverContent() {
                   </div>
                 </dl>
                 <p className="mt-2 text-xs text-ink-faint">
-                  {[e.location, e.startsAt?.slice(0, 10), e.priceText].filter(Boolean).join(" · ")}
+                  {[e.location, e.startsAt ? new Date(e.startsAt).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) : null].filter(Boolean).join(", ")}{e.priceText ? `. ${e.priceText}` : ""}
                 </p>
                 <div className="mt-3">
                   {requested ? (

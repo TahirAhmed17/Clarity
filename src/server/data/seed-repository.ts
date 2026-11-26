@@ -5,6 +5,7 @@ import type {
   ActionPlan,
   EventRequest,
   SuggestionReview,
+  BiomarkerCorrectionInput,
   TimelineNote,
   Biomarker,
   ChatMessage,
@@ -15,6 +16,7 @@ import type {
   WearableMetric,
 } from "@/lib/domain";
 import type { HealthRepository, NewDocument } from "./repository";
+import { applyCorrection } from "../biomarkers/correction";
 
 /**
  * In-memory repository backed by the bundled synthetic dataset.
@@ -100,6 +102,22 @@ export class SeedRepository implements HealthRepository {
     const created = rows.map((r) => ({ ...r, id: randomUUID(), profileId }));
     this.biomarkers.push(...created);
     return created;
+  }
+
+  async correctBiomarker(profileId: string, biomarkerId: string, input: BiomarkerCorrectionInput) {
+    const b = this.biomarkers.find((x) => x.id === biomarkerId && x.profileId === profileId);
+    if (!b) return null;
+    Object.assign(b, applyCorrection(b, input));
+    return b;
+  }
+
+  async deleteDocument(profileId: string, documentId: string) {
+    const doc = this.documents.find((d) => d.id === documentId && d.profileId === profileId);
+    if (!doc) return false;
+    this.biomarkers = this.biomarkers.filter((b) => !(b.documentId === documentId && b.profileId === profileId));
+    this.wearables = this.wearables.filter((w) => !(w.documentId === documentId && w.profileId === profileId));
+    this.documents = this.documents.filter((d) => d !== doc);
+    return true;
   }
 
   async listWearableMetrics(profileId: string) {

@@ -7,6 +7,9 @@ import { evidenceRefs } from "../evidence/refs";
 /** Serializable data for one biomarker card (crosses the server → client boundary). */
 export interface BiomarkerCardData {
   key: string;
+  /** Id of the latest record (for corrections). */
+  id: string;
+  correctedFrom: string | null;
   code: string | null;
   name: string;
   valueText: string;
@@ -50,6 +53,8 @@ export function biomarkerCards(rows: Biomarker[]): BiomarkerCardData[] {
     const c = h.change;
     return {
       key: h.key,
+      id: latestRow.id,
+      correctedFrom: latestRow.correction ? `${latestRow.correction.original.valueText} ${latestRow.correction.original.unitAsReported ?? ""}`.trim() : null,
       code: h.code,
       name: h.name,
       valueText: h.latest.valueText,

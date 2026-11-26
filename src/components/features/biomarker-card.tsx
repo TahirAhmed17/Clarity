@@ -9,6 +9,7 @@ import { ProvenanceTag } from "@/components/ui/primitives";
 import { cn } from "@/lib/cn";
 import { useReducedMotion } from "@/lib/preferences";
 import type { BiomarkerCardData } from "@/server/insights/view-model";
+import { CorrectValue } from "./correct-value";
 import { EvidenceList } from "./evidence-list";
 
 const STATUS: Record<BiomarkerCardData["status"], { text: string; glyph: string; tone: string }> = {
@@ -83,6 +84,8 @@ export function BiomarkerCard({ b }: { b: BiomarkerCardData }) {
               <div className="space-y-3 pt-3 text-sm">
                 <p className="text-ink-soft">{b.measures ?? "This test isn't in Clarity's library yet, so it's shown exactly as reported."}</p>
                 <EvidenceList items={b.evidence} />
+                {b.correctedFrom && <p className="text-xs text-ink-faint">You corrected this. Originally read as {b.correctedFrom}.</p>}
+                <CorrectValue id={b.id} valueText={b.valueText} unit={b.unit} refText={b.refText} />
                 <div className="flex flex-wrap items-center gap-3">
                   <ProvenanceTag kind={PROV[b.source]} />
                   <Link href={`/app?q=${encodeURIComponent(`What does my ${b.name} result mean?`)}`} className="font-semibold text-teal-ink underline decoration-teal/40 underline-offset-4">

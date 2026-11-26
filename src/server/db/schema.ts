@@ -79,6 +79,11 @@ export const documents = pgTable(
   (t) => [index("documents_profile_idx").on(t.profileId), uniqueIndex("documents_profile_sha_idx").on(t.profileId, t.sha256)],
 );
 
+export interface BiomarkerCorrection {
+  original: { valueText: string; unitAsReported: string | null; refText: string | null; source: string };
+  correctedAt: string;
+}
+
 export const biomarkers = pgTable(
   "biomarkers",
   {
@@ -103,6 +108,8 @@ export const biomarkers = pgTable(
     /** 0..1 parser confidence for extracted rows. */
     confidence: real("confidence"),
     pageNumber: smallint("page_number"),
+    /** Set when the user corrected the record: keeps the original extracted values for provenance. */
+    correction: jsonb("correction").$type<BiomarkerCorrection | null>(),
     createdAt: createdAt(),
   },
   (t) => [index("biomarkers_profile_code_idx").on(t.profileId, t.code, t.observedOn)],
