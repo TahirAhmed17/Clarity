@@ -4,7 +4,7 @@ import { latestReport } from "@/data/synthetic/dataset";
 import { parseAppleHealthXml } from "@/server/ingestion/apple-health/parse";
 import { IngestionError } from "@/server/ingestion/errors";
 import { extractPdfLines } from "@/server/ingestion/pdf/extract-lines";
-import { parseLabReport } from "@/server/ingestion/pdf/parse-biomarkers";
+import { parseLabReport, parseUnambiguousDate } from "@/server/ingestion/pdf/parse-biomarkers";
 import { ingestAppleHealthExport, ingestBloodReport } from "@/server/ingestion/service";
 import { sanitizeFilename, validateUpload } from "@/server/ingestion/validation";
 import { SeedRepository } from "@/server/data/seed-repository";
@@ -71,6 +71,45 @@ describe("PDF biomarker extraction", () => {
     const mystery = parsed.biomarkers.find((b) => b.nameAsReported === "Mystery Marker");
     expect(mystery?.code).toBeNull();
     expect(mystery?.refLow).toBeNull();
+  });
+
+  it("handles common real-world layouts (synthetic values): thousands, unit+range runs, labelled ranges, microscopy, month-name dates", () => {
+    const parsed = parseLabReport([
+      {
+        pageNumber: 1,
+        lines: [
+          "Sample Collected On : 03/Sep/2026 09:15AM",
+          "Total Leucocyte Count(TLC)\t7,450\tCells/cmm 4000 - 11000",
+          "C- Reactive Protein\t2.10\tmg/L\t0 - 5",
+          "Non-HDL Cholesterol\t118\tmg/dL\t< 130 Optimal",
+          "ALT (SGPT)\t28\tU/L\t0 - 45",
+          "Vitamin B - 12 Level\t402\tpg/mL\t187 - 883",
+          "Platelet Count\t2.4\tLakhs/cmm\t1.5 - 4.5",
+          "Uric Acid\t5.1\tmg/dL\t3.7 - 7.7",
+          "Uric Acid\t2-3\t/HPF",
+          "Hemoglobin\t14,2\tg/dL\t13,5 - 18,0",
+        ],
+      },
+    ]);
+    const by = (n: string) => parsed.biomarkers.find((b) => b.nameAsReported === n)!;
+    expect(parsed.collectedOn).toBe("2026-09-03");
+    expect(by("Total Leucocyte Count(TLC)")).toMatchObject({ code: "WBC", valueText: "7,450", valueNumeric: 7450, unitAsReported: "Cells/cmm", refLow: 4000, refHigh: 11000 });
+    expect(parsed.warnings.join(" ")).toMatch(/thousands separator/);
+    expect(by("C- Reactive Protein").code).toBe("CRP");
+    expect(by("Non-HDL Cholesterol")).toMatchObject({ code: "NON_HDL", unitAsReported: "mg/dL", refText: "< 130 Optimal", refLow: null, refHigh: null });
+    expect(by("ALT (SGPT)").code).toBe("ALT");
+    expect(by("Vitamin B - 12 Level").code).toBe("B12");
+    expect(by("Hemoglobin")).toMatchObject({ valueNumeric: 14.2, refLow: 13.5, refHigh: 18 }); // decimal comma
+    const uric = parsed.biomarkers.filter((b) => b.nameAsReported === "Uric Acid");
+    expect(uric.find((b) => b.unitAsReported === "mg/dL")?.code).toBe("URIC_ACID");
+    expect(uric.find((b) => b.unitAsReported === "/HPF")?.code ?? null).toBeNull();
+  });
+
+  it("parses only unambiguous dates", () => {
+    expect(parseUnambiguousDate("25 November 2026").iso).toBe("2026-11-25");
+    expect(parseUnambiguousDate("Nov 5, 2026").iso).toBe("2026-11-05");
+    expect(parseUnambiguousDate("2026-11-05 10:00").iso).toBe("2026-11-05");
+    expect(parseUnambiguousDate("05/11/2026")).toEqual({ iso: null, ambiguous: "05/11/2026" });
   });
 
   it("parses space-separated rows", () => {

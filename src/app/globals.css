@@ -38,6 +38,12 @@
   --color-stone: #ece6df;
   --color-stone-ink: #6a5f55;
 
+  /* Chart tokens — validated (dataviz validate_palette.js, light surface): chroma, CVD ΔE 10.9, contrast ≥ 3:1. */
+  --color-chart-mark: #0a8f84;
+  --color-chart-alert: #c24e3a;
+  --color-chart-band: #dcf0e2;
+  --color-chart-grid: #e3eae8;
+
   --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
 

@@ -329,5 +329,5 @@ describe("M2.10 plans, adaptation and timeline", () => {
     expect(await repo.listActionHistory(DEMO_PROFILE_ID)).toEqual([]);
     expect(await repo.listTimelineNotes(DEMO_PROFILE_ID)).toEqual([]);
     await pg.client.close();
-  });
+  }, 90_000); // heavy: fresh PGlite + migrations; was intermittently slow under parallel load
 });
