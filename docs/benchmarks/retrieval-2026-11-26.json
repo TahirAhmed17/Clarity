@@ -1,0 +1,81 @@
+{
+  "ranAt": "2026-11-26T19:57:18.690Z",
+  "k": 5,
+  "reps": 5,
+  "corpus": 41,
+  "queries": 20,
+  "embedMsBatch": 50.127,
+  "embedMsSingle": 4.132,
+  "results": [
+    {
+      "system": "memory BM25 (baseline)",
+      "P@5": 0.31,
+      "R@5": 0.813,
+      "MRR": 0.875,
+      "nDCG@5": 0.793,
+      "filterViolations": 0,
+      "p50ms": 0.041,
+      "p95ms": 0.13
+    },
+    {
+      "system": "pgvector · vector",
+      "P@5": 0.4,
+      "R@5": 0.971,
+      "MRR": 0.975,
+      "nDCG@5": 0.936,
+      "filterViolations": 0,
+      "p50ms": 2.677,
+      "p95ms": 4.143
+    },
+    {
+      "system": "pgvector · full-text",
+      "P@5": 0.33,
+      "R@5": 0.838,
+      "MRR": 0.867,
+      "nDCG@5": 0.801,
+      "filterViolations": 0,
+      "p50ms": 2.008,
+      "p95ms": 2.778
+    },
+    {
+      "system": "pgvector · hybrid (RRF)",
+      "P@5": 0.4,
+      "R@5": 0.967,
+      "MRR": 0.917,
+      "nDCG@5": 0.914,
+      "filterViolations": 0,
+      "p50ms": 4.1,
+      "p95ms": 5.722
+    },
+    {
+      "system": "qdrant · vector",
+      "P@5": 0.4,
+      "R@5": 0.971,
+      "MRR": 0.975,
+      "nDCG@5": 0.936,
+      "filterViolations": 0,
+      "p50ms": 2.404,
+      "p95ms": 4.208
+    },
+    {
+      "system": "qdrant · sparse/idf",
+      "P@5": 0.35,
+      "R@5": 0.879,
+      "MRR": 0.8,
+      "nDCG@5": 0.788,
+      "filterViolations": 0,
+      "p50ms": 2.153,
+      "p95ms": 2.835
+    },
+    {
+      "system": "qdrant · hybrid (RRF)",
+      "P@5": 0.41,
+      "R@5": 0.983,
+      "MRR": 0.875,
+      "nDCG@5": 0.895,
+      "filterViolations": 0,
+      "p50ms": 2.82,
+      "p95ms": 4.439
+    }
+  ]
+}

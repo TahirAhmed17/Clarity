@@ -1,4 +1,5 @@
 import {
+  customType,
   boolean,
   date,
   index,
@@ -13,7 +14,9 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
+  vector,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 /**
  * Clarity M1 schema. See DATA_MODEL.md for rationale.
@@ -221,6 +224,10 @@ export type PlanAction = {
   detail: string;
   category: "movement" | "nutrition" | "sleep" | "supplement" | "professional" | "other";
   status: "pending" | "completed" | "skipped";
+  /** Why the recommendation engine chose this action. */
+  reasons?: string[];
+  /** Curated evidence chunk ids supporting the action. */
+  evidenceChunkIds?: string[];
 };
 
 export const actionPlans = pgTable(
@@ -256,6 +263,90 @@ export const messages = pgTable(
   (t) => [index("messages_profile_conv_idx").on(t.profileId, t.conversationId, t.createdAt)],
 );
 
+/* ---------------- M2: curated evidence (shared, read-only reference data) ---------------- */
+
+const tsvector = customType<{ data: string }>({ dataType: () => "tsvector" });
+
+export const EMBEDDING_DIMENSIONS = 384;
+
+export const evidenceSources = pgTable("evidence_sources", {
+  id: text("id").primaryKey(),
+  publisher: text("publisher").notNull(),
+  title: text("title").notNull(),
+  url: text("url").notNull(),
+  publishedOn: date("published_on"),
+  lastUpdatedOn: date("last_updated_on"),
+  lastReviewedOn: date("last_reviewed_on"),
+  nextReviewDue: date("next_review_due"),
+  retrievedOn: date("retrieved_on").notNull(),
+  dateNote: text("date_note"),
+  topic: text("topic").notNull(),
+  evidenceClass: text("evidence_class").notNull(),
+  limitations: jsonb("limitations").$type<string[]>().notNull().default([]),
+});
+
+export const evidenceChunks = pgTable(
+  "evidence_chunks",
+  {
+    id: text("id").primaryKey(),
+    sourceId: text("source_id")
+      .notNull()
+      .references(() => evidenceSources.id, { onDelete: "cascade" }),
+    heading: text("heading").notNull(),
+    content: text("content").notNull(),
+    biomarkers: text("biomarkers").array().notNull().default([]),
+    systems: text("systems").array().notNull().default([]),
+    themes: text("themes").array().notNull().default([]),
+    /** all-MiniLM-L6-v2 sentence embedding (normalised). */
+    embedding: vector("embedding", { dimensions: EMBEDDING_DIMENSIONS }),
+    embeddingModel: text("embedding_model"),
+    /** Full-text search vector for hybrid retrieval. */
+    tsv: tsvector("tsv").generatedAlwaysAs(sql`to_tsvector('english', heading || ' ' || content)`),
+  },
+  (t) => [
+    index("evidence_chunks_embedding_idx").using("hnsw", t.embedding.op("vector_cosine_ops")),
+    index("evidence_chunks_tsv_idx").using("gin", t.tsv),
+    index("evidence_chunks_systems_idx").using("gin", t.systems),
+    index("evidence_chunks_biomarkers_idx").using("gin", t.biomarkers),
+  ],
+);
+
+/* ---------------- M2: action history (completed / skipped plan actions) ---------------- */
+
+export const actionOutcome = pgEnum("action_outcome", ["completed", "skipped"]);
+
+export const actionHistory = pgTable(
+  "action_history",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    profileId: uuid("profile_id").notNull().references(() => profiles.id, { onDelete: "cascade" }),
+    planId: uuid("plan_id").references(() => actionPlans.id, { onDelete: "set null" }),
+    actionId: text("action_id").notNull(),
+    actionTitle: text("action_title").notNull(),
+    category: text("category").notNull(),
+    outcome: actionOutcome("outcome").notNull(),
+    note: text("note"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("action_history_profile_idx").on(t.profileId, t.createdAt)],
+);
+
+/* ---------------- M2: user-authored timeline events (goal / routine changes) ---------------- */
+
+export const healthTimelineEvents = pgTable(
+  "health_timeline_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    profileId: uuid("profile_id").notNull().references(() => profiles.id, { onDelete: "cascade" }),
+    /** goal_added | goal_removed | routine_changed */
+    kind: text("kind").notNull(),
+    title: text("title").notNull(),
+    detail: jsonb("detail").$type<Record<string, unknown>>().notNull().default({}),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("health_timeline_events_profile_idx").on(t.profileId, t.occurredAt)],
+);
+
 export type ProfileRow = typeof profiles.$inferSelect;
 export type DocumentRow = typeof documents.$inferSelect;
 export type BiomarkerRow = typeof biomarkers.$inferSelect;
@@ -267,3 +358,4 @@ export type EventRow = typeof events.$inferSelect;
 export type EventRequestRow = typeof eventRequests.$inferSelect;
 export type ActionPlanRow = typeof actionPlans.$inferSelect;
 export type MessageRow = typeof messages.$inferSelect;
+export type ActionHistoryRow = typeof actionHistory.$inferSelect;

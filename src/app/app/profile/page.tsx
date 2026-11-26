@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { DeleteDataButton } from "@/components/features/delete-data";
+import { GoalsEditor } from "@/components/features/goals-editor";
 import { Badge, Card, PageHeader, ProvenanceTag, SectionHeading } from "@/components/ui/primitives";
 import { listEngines } from "@/server/ai/factory";
 import { loadPageData } from "@/server/session";
@@ -17,13 +18,7 @@ async function ProfileContent() {
         <SectionHeading eyebrow="About you" title={profile.displayName} />
         {profile.isSynthetic && <ProvenanceTag kind="synthetic" />}
         <h3 className="mt-5 mb-2 text-sm font-semibold text-teal-ink">Goals</h3>
-        <ul className="flex flex-wrap gap-2">
-          {profile.goals.map((g) => (
-            <li key={g}>
-              <Badge tone="lime">{g}</Badge>
-            </li>
-          ))}
-        </ul>
+        <GoalsEditor initial={profile.goals} />
         <h3 className="mt-5 mb-2 text-sm font-semibold text-teal-ink">Routine</h3>
         <dl className="space-y-1.5 text-sm">
           {Object.entries(profile.routine).map(([k, v]) => (
@@ -33,7 +28,7 @@ async function ProfileContent() {
             </div>
           ))}
         </dl>
-        <p className="mt-4 text-xs text-ink-faint">Editing goals and routine arrives in M3.7.</p>
+        <p className="mt-4 text-xs text-ink-faint">Goal changes are logged on your timeline. Routine editing arrives in M3.7.</p>
       </Card>
 
       <Card>

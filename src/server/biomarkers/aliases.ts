@@ -26,6 +26,10 @@ const ALIASES: Record<string, string[]> = {
   VITD25OH: ["vitamin d (25-oh)", "vitamin d", "25-oh vitamin d", "25-hydroxyvitamin d", "25(oh)d", "vitamin d 25-oh"],
   HSCRP: ["hs-crp", "hscrp", "high sensitivity crp", "high-sensitivity c-reactive protein"],
   CRP: ["crp", "c-reactive protein"],
+  ALP: ["alp", "alkaline phosphatase", "alk phos"],
+  BILIRUBIN: ["bilirubin", "total bilirubin", "bilirubin (total)"],
+  ALBUMIN: ["albumin", "serum albumin"],
+  UACR: ["urine albumin:creatinine ratio", "albumin creatinine ratio", "acr", "uacr", "urine acr"],
 };
 
 const LOOKUP = new Map<string, string>();

@@ -15,6 +15,41 @@
       "when": 1795722142214,
       "tag": "20261126194222_rls_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795722823730,
+      "tag": "20261126195343_enable_pgvector",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795722835498,
+      "tag": "20261126195355_evidence_and_action_history",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795722847611,
+      "tag": "20261126195407_rls_m2",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795723279944,
+      "tag": "20261126200119_timeline_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795723285217,
+      "tag": "20261126200125_rls_timeline",
+      "breakpoints": true
     }
   ]
 }

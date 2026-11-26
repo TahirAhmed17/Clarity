@@ -141,3 +141,65 @@ export interface ChatMessage {
 }
 
 export type RangeStatus = "below" | "within" | "above" | "no_range" | "not_numeric";
+
+/* ---------------- M2 ---------------- */
+
+export type ActionCategory = "movement" | "nutrition" | "sleep" | "supplement" | "professional" | "other";
+
+export interface PlanActionItem {
+  id: string;
+  title: string;
+  detail: string;
+  category: ActionCategory;
+  status: "pending" | "completed" | "skipped";
+  reasons?: string[];
+  evidenceChunkIds?: string[];
+}
+
+export interface ActionPlan {
+  id: string;
+  profileId: string;
+  planDate: string;
+  primaryAction: PlanActionItem;
+  supportingActions: PlanActionItem[];
+  rationale: string;
+  generatedBy: string;
+  status: "active" | "superseded";
+  createdAt: string;
+}
+
+export interface ActionHistoryEntry {
+  id: string;
+  profileId: string;
+  planId: string | null;
+  actionId: string;
+  actionTitle: string;
+  category: string;
+  outcome: "completed" | "skipped";
+  note: string | null;
+  createdAt: string;
+}
+
+export interface EventRequest {
+  id: string;
+  profileId: string;
+  eventId: string;
+  status: "requested" | "mock_confirmed" | "cancelled";
+  note: string | null;
+  isMock: boolean;
+  createdAt: string;
+}
+
+export interface TimelineNote {
+  id: string;
+  profileId: string;
+  kind: string;
+  title: string;
+  detail: Record<string, unknown>;
+  occurredAt: string;
+}
+
+export type SuggestionReview =
+  | { status: "approved"; reviewerDose: string; reviewerNote?: string | null }
+  | { status: "changed"; catalogueId: string; reviewerDose?: string | null; reviewerNote: string }
+  | { status: "rejected"; reviewerNote: string };

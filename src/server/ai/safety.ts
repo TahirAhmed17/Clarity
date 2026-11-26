@@ -7,7 +7,12 @@ import type { CompanionResponse, EngineOutput, HealthContext } from "./schemas";
  * M1 scope: deterministic rule checks. Expanded with evidence-grounding checks in M2.
  */
 
-const DOSE = /\b\d+(?:[.,]\d+)?\s?(?:mg|mcg|µg|ug|iu|i\.u\.|g|ml|units?)\b(?:\s?(?:per|\/|a|each)\s?(?:day|daily|week|d))?/gi;
+/**
+ * Dose-like amounts ("4000 IU", "65 mg daily", "2 g a day"). Concentrations from lab results
+ * ("13 ug/L", "124 g/L", "38 U/L", "5.2 mmol/L") are NOT doses: a unit followed by "/<volume|mass>"
+ * is excluded, while "/day" style frequencies still count as doses.
+ */
+const DOSE = /\b\d+(?:[.,]\d+)?\s?(?:mg|mcg|µg|ug|iu|i\.u\.|g|ml|units?)\b(?!\s?\/\s?(?:l|dl|ml|mmol|mol|kg|g)\b)(?:\s?(?:per|\/|a|each)\s?(?:day|daily|week|d))?/gi;
 const DIAGNOSIS = [
   /\byou (?:have|are suffering from|have got|likely have|probably have)\s+(?:an?\s+)?(?:[a-z-]+\s){0,3}(?:disease|disorder|syndrome|deficiency|anaemia|anemia|diabetes|hypothyroidism|hyperthyroidism|failure|cancer|infection)\b/i,
   /\b(?:this|these results?) (?:confirms?|means?|indicates?|shows?) (?:that )?you have\b/i,
@@ -77,6 +82,8 @@ export function applySafety(
     safety: { flagForProfessional, reasons, interventions: [...interventions] },
     engine: meta.engine,
     engineNotice: meta.engineNotice,
+    nextMoveReasons: [],
+    sources: [],
     disclaimer: HEALTH_DISCLAIMER,
   };
 }

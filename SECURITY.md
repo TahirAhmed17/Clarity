@@ -32,3 +32,12 @@
 - The `/doctor` route is not role-restricted yet (M3.8).
 - No rate limiting on `/api/ai/respond` or the upload routes (needed before deployment).
 - `drizzle-kit` dev dependency carries a moderate `esbuild` dev-server advisory (not part of the runtime bundle).
+
+## M2 additions
+
+- **Evidence**: only verified sources; the AI can cite only chunk IDs supplied in that request (enforced by the safety layer and by tests); blocked sources are recorded and never cited.
+- **Dose safety**: the AI never writes `reviewer_dose`; approval requires a reviewer-entered dose (zod). The dose filter distinguishes concentrations from doses (regression-tested).
+- **Safety-first recommendations**: flagged results always produce a primary "see a GP" action until the user marks it done.
+- **Simulated reviewer**: `/doctor` and `POST /api/doctor/suggestions/[id]` act as a role-checked synthetic reviewer and are labelled SIMULATED everywhere. Real authentication and role restriction come in M3.8 / before deploy.
+- **New routes** validate input with zod and return safe errors; the mock booking makes no external calls.
+- **RLS** covers every new table and was verified on the real Supabase Postgres image.

@@ -83,5 +83,7 @@ export function buildHealthContext(input: {
     wearables,
     evidence: [],
     missing,
+    systems: [],
+    recommendation: null,
   };
 }

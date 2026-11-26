@@ -2,6 +2,7 @@ import { z } from "zod";
 import { respond } from "@/server/ai/service";
 import { getEnv } from "@/server/config/env";
 import { getRepository } from "@/server/data";
+import { getRetriever } from "@/server/evidence";
 import { errorResponse, json } from "@/server/http";
 import { getCurrentProfileId } from "@/server/session";
 
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
     return json({ error: { code: "bad_request", message: "Send JSON like { \"question\": \"...\" } (max 2000 characters)." } }, 400);
   }
   try {
-    const res = await respond(getCurrentProfileId(), body.question ?? null, { repo: await getRepository(), env: getEnv() });
+    const res = await respond(getCurrentProfileId(), body.question ?? null, { repo: await getRepository(), env: getEnv(), retriever: await getRetriever() });
     return json(res);
   } catch (err) {
     return errorResponse(err, "ai.respond");

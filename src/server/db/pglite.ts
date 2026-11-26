@@ -21,6 +21,9 @@ const SUPABASE_AUTH_STUB = `
       create role authenticated nologin;
     end if;
   end $$;
+  -- Supabase puts extensions (pgvector) in the "extensions" schema, which is on the search_path.
+  create schema if not exists extensions;
+  set search_path to public, extensions;
 `;
 
 /**
@@ -32,7 +35,7 @@ export async function createMigratedPglite() {
   await client.exec(SUPABASE_AUTH_STUB);
   const db = drizzle(client, { schema });
   await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
-  await client.exec(`grant usage on schema public, auth to authenticated;
+  await client.exec(`grant usage on schema public, auth, extensions to authenticated;
     grant select, insert, update, delete on all tables in schema public to authenticated;`);
   return { client, db: db as unknown as ClarityDb };
 }

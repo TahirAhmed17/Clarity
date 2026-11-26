@@ -86,3 +86,43 @@ Rules:
 5. Persists the user and assistant messages.
 
 Output sections map to the brief: noticed → whyItMatters → nextMove (exactly one) → supportingActions (≤3) → evidence → limitations → followUps.
+
+## M2 additions
+
+```
+src/data/evidence/            catalogue.ts (verified sources + paraphrased notes), embeddings.json (pre-computed)
+src/server/evidence/          embedder (MiniLM, lazy), lexical (BM25 + RRF), Retriever interface,
+                              memory / pgvector / qdrant retrievers, refs (display), index (production choice)
+src/server/biomarkers/        definitions (units, conversions, plausibility, system mappings), intelligence (validation, history)
+src/server/systems/           organ-systems (6 systems, deterministic insights)
+src/server/recommendations/   engine (ranking, safety-first, adaptation), service (plans, outcomes)
+src/server/supplements/       eligibility rules + review schema
+src/server/events/            relevance ranking with explanations
+src/server/timeline/          unified timeline + longitudinal changes
+src/server/insights/          snapshot (one load of profile/biomarkers/wearables/symptoms/history)
+src/server/ai/evaluation.ts   engine evaluation on identical synthetic cases
+```
+
+### Companion turn (M2)
+
+```
+snapshot ─► recommend() ─────────────────────────────┐ (authoritative next move + reasons + evidence ids)
+        ├─► buildSystemInsights() ─► system summaries │
+        └─► retriever.search(question) ─► evidence ◄──┘ (slot budget: 3 next-move, 3 retrieved, rest supporting)
+                         │
+                  context ─► engine (Gemini | LingSante | Mock) ─► applySafety() ─► override nextMove/supporting
+                                                                                 └► response + sources
+```
+
+The engine explains; it does not choose. Deterministic layers (validation, ranges, systems, recommendations, safety) are unit-tested independently of any model.
+
+### API routes added
+
+| Route | Purpose |
+| --- | --- |
+| `GET/POST /api/plan` | Active plan / generate a new one |
+| `POST /api/plan/actions` | Mark an action completed or skipped (logged to `action_history`) |
+| `GET/POST /api/supplements` | Suggestions / run eligibility |
+| `POST /api/doctor/suggestions/[id]` | Simulated review (role-checked) |
+| `POST /api/events/[id]/request` | Mock booking request (duplicate → 409) |
+| `PATCH /api/profile` | Goals and routine; changes logged atomically to the timeline |

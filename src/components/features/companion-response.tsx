@@ -1,5 +1,6 @@
 import type { CompanionResponse } from "@/server/ai/schemas";
 import { Badge, Card, Disclaimer, ProvenanceTag } from "@/components/ui/primitives";
+import { EvidenceList } from "./evidence-list";
 
 const CATEGORY_LABEL: Record<CompanionResponse["nextMove"]["category"], string> = {
   movement: "Movement",
@@ -35,6 +36,7 @@ export function CompanionResponseView({ res }: { res: CompanionResponse }) {
         </div>
         <h3 className="font-display text-2xl text-ink">{res.nextMove.title}</h3>
         <p className="mt-2 text-ink-soft">{res.nextMove.detail}</p>
+        {res.nextMoveReasons.length > 0 && <p className="mt-2 text-xs text-ink-faint">Why this move: {res.nextMoveReasons.join("; ")}.</p>}
         <p className="mt-4 text-sm text-ink">{res.whyItMatters}</p>
       </Card>
 
@@ -76,14 +78,17 @@ export function CompanionResponseView({ res }: { res: CompanionResponse }) {
           </section>
           <section>
             <h4 className="mb-2 text-sm font-semibold text-teal-ink">Supporting evidence</h4>
-            {res.evidence.length === 0 ? (
-              <p className="text-sm text-ink-soft">No curated sources were retrieved yet (evidence retrieval arrives in M2).</p>
-            ) : (
-              <ul className="space-y-2 text-sm">
+            {res.evidence.length > 0 && (
+              <ul className="mb-3 list-disc space-y-1 pl-5 text-sm text-ink-soft">
                 {res.evidence.map((e) => (
                   <li key={e.evidenceId}>{e.claim}</li>
                 ))}
               </ul>
+            )}
+            {res.sources.length === 0 ? (
+              <p className="text-sm text-ink-soft">No curated sources were retrieved for this answer.</p>
+            ) : (
+              <EvidenceList items={res.sources} title="Curated sources supplied to the AI" />
             )}
           </section>
           <section>

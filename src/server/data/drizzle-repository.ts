@@ -1,6 +1,10 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type {
+  ActionHistoryEntry,
+  ActionPlan,
+  SuggestionReview,
+  TimelineNote,
   Biomarker,
   ChatMessage,
   HealthDocument,
@@ -81,6 +85,8 @@ const toSuggestion = (r: s.SupplementSuggestionRow): SupplementSuggestion => ({
   createdAt: r.createdAt.toISOString(),
 });
 
+const toPlan = (r: s.ActionPlanRow): ActionPlan => ({ ...r, createdAt: r.createdAt.toISOString() });
+
 const toMessage = (r: s.MessageRow): ChatMessage => ({ ...r, createdAt: r.createdAt.toISOString() });
 
 export class DrizzleRepository implements HealthRepository {
@@ -92,13 +98,22 @@ export class DrizzleRepository implements HealthRepository {
     return r ? toProfile(r) : null;
   }
 
-  async updateProfile(profileId: string, patch: Partial<Pick<Profile, "displayName" | "goals" | "routine">>) {
-    const [r] = await this.db
-      .update(s.profiles)
-      .set({ ...patch, updatedAt: new Date() })
-      .where(eq(s.profiles.id, profileId))
-      .returning();
-    return r ? toProfile(r) : null;
+  async updateProfile(
+    profileId: string,
+    patch: Partial<Pick<Profile, "displayName" | "goals" | "routine">>,
+    timelineNotes: Pick<TimelineNote, "kind" | "title" | "detail">[] = [],
+  ) {
+    // Profile change and its timeline entries commit together or not at all.
+    return this.db.transaction(async (tx) => {
+      const [r] = await tx
+        .update(s.profiles)
+        .set({ ...patch, updatedAt: new Date() })
+        .where(eq(s.profiles.id, profileId))
+        .returning();
+      if (!r) return null;
+      if (timelineNotes.length) await tx.insert(s.healthTimelineEvents).values(timelineNotes.map((n) => ({ ...n, profileId })));
+      return toProfile(r);
+    });
   }
 
   async listDocuments(profileId: string) {
@@ -228,9 +243,112 @@ export class DrizzleRepository implements HealthRepository {
     return toMessage(r);
   }
 
+  // ---- M2 ----
+
+  async getActivePlan(profileId: string) {
+    const [r] = await this.db
+      .select()
+      .from(s.actionPlans)
+      .where(and(eq(s.actionPlans.profileId, profileId), eq(s.actionPlans.status, "active")))
+      .orderBy(desc(s.actionPlans.createdAt))
+      .limit(1);
+    return r ? toPlan(r) : null;
+  }
+
+  async savePlan(profileId: string, plan: Pick<ActionPlan, "planDate" | "primaryAction" | "supportingActions" | "rationale" | "generatedBy">) {
+    return this.db.transaction(async (tx) => {
+      await tx
+        .update(s.actionPlans)
+        .set({ status: "superseded" })
+        .where(and(eq(s.actionPlans.profileId, profileId), eq(s.actionPlans.status, "active")));
+      const [r] = await tx.insert(s.actionPlans).values({ ...plan, profileId, status: "active" }).returning();
+      return toPlan(r);
+    });
+  }
+
+  async updatePlanActionStatus(profileId: string, planId: string, actionId: string, status: "completed" | "skipped" | "pending") {
+    const [r] = await this.db
+      .select()
+      .from(s.actionPlans)
+      .where(and(eq(s.actionPlans.id, planId), eq(s.actionPlans.profileId, profileId)))
+      .limit(1);
+    if (!r) return null;
+    const primaryAction = r.primaryAction.id === actionId ? { ...r.primaryAction, status } : r.primaryAction;
+    const supportingActions = r.supportingActions.map((a) => (a.id === actionId ? { ...a, status } : a));
+    const [u] = await this.db.update(s.actionPlans).set({ primaryAction, supportingActions }).where(eq(s.actionPlans.id, planId)).returning();
+    return toPlan(u);
+  }
+
+  async addActionHistory(profileId: string, entry: Omit<ActionHistoryEntry, "id" | "profileId" | "createdAt">) {
+    const [r] = await this.db.insert(s.actionHistory).values({ ...entry, profileId }).returning();
+    return { ...r, createdAt: r.createdAt.toISOString() };
+  }
+
+  async listActionHistory(profileId: string) {
+    const rows = await this.db.select().from(s.actionHistory).where(eq(s.actionHistory.profileId, profileId)).orderBy(desc(s.actionHistory.createdAt));
+    return rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() }));
+  }
+
+  async listPlans(profileId: string) {
+    const rows = await this.db.select().from(s.actionPlans).where(eq(s.actionPlans.profileId, profileId)).orderBy(desc(s.actionPlans.createdAt));
+    return rows.map(toPlan);
+  }
+
+  async createSupplementSuggestion(profileId: string, sug: { catalogueId: string; rationale: string }) {
+    const [r] = await this.db.insert(s.supplementSuggestions).values({ ...sug, profileId }).returning();
+    return toSuggestion(r);
+  }
+
+  async listSuggestionsForReview() {
+    const rows = await this.db
+      .select({ sug: s.supplementSuggestions, name: s.profiles.displayName })
+      .from(s.supplementSuggestions)
+      .innerJoin(s.profiles, eq(s.profiles.id, s.supplementSuggestions.profileId))
+      .orderBy(desc(s.supplementSuggestions.createdAt));
+    return rows.map((r) => ({ ...toSuggestion(r.sug), profileDisplayName: r.name }));
+  }
+
+  async reviewSuggestion(suggestionId: string, reviewerProfileId: string, review: SuggestionReview) {
+    const [r] = await this.db
+      .update(s.supplementSuggestions)
+      .set({
+        status: review.status,
+        reviewerNote: review.reviewerNote ?? null,
+        reviewerDose: review.status === "rejected" ? null : (review.reviewerDose ?? null),
+        ...(review.status === "changed" ? { catalogueId: review.catalogueId } : {}),
+        reviewerProfileId,
+        reviewedAt: new Date(),
+      })
+      .where(eq(s.supplementSuggestions.id, suggestionId))
+      .returning();
+    return r ? toSuggestion(r) : null;
+  }
+
+  async createEventRequest(profileId: string, eventId: string, note: string | null) {
+    const [r] = await this.db.insert(s.eventRequests).values({ profileId, eventId, note }).returning();
+    return { ...r, createdAt: r.createdAt.toISOString() };
+  }
+
+  async listEventRequests(profileId: string) {
+    const rows = await this.db.select().from(s.eventRequests).where(eq(s.eventRequests.profileId, profileId));
+    return rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() }));
+  }
+
+  async addTimelineNote(profileId: string, note: Pick<TimelineNote, "kind" | "title" | "detail">) {
+    const [r] = await this.db.insert(s.healthTimelineEvents).values({ ...note, profileId }).returning();
+    return { ...r, occurredAt: r.occurredAt.toISOString() };
+  }
+
+  async listTimelineNotes(profileId: string) {
+    const rows = await this.db.select().from(s.healthTimelineEvents).where(eq(s.healthTimelineEvents.profileId, profileId));
+    return rows.map((r) => ({ ...r, occurredAt: r.occurredAt.toISOString() }));
+  }
+
   async deleteProfileHealthData(profileId: string) {
     await this.db.transaction(async (tx) => {
       // Order respects FKs; documents last because biomarkers/wearables reference them.
+      await tx.delete(s.healthTimelineEvents).where(eq(s.healthTimelineEvents.profileId, profileId));
+      await tx.delete(s.actionHistory).where(eq(s.actionHistory.profileId, profileId));
       await tx.delete(s.messages).where(eq(s.messages.profileId, profileId));
       await tx.delete(s.actionPlans).where(eq(s.actionPlans.profileId, profileId));
       await tx.delete(s.eventRequests).where(eq(s.eventRequests.profileId, profileId));

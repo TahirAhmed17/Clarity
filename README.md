@@ -9,7 +9,11 @@ Clarity is a personal health intelligence companion. It turns blood reports, wea
 
 ## Status
 
-**Milestone M1 (Foundation) is complete and waiting for review.** See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) for what's done and what's next, and [TESTING.md](TESTING.md) for actual test results.
+- **M1 Foundation** ✅ ([PR #1](https://github.com/TahirAhmed17/Clarity/pull/1))
+- **M2 Health intelligence** ✅: curated evidence, pgvector retrieval, biomarker validation, organ systems, recommendations, supplements (simulated review), events, timeline
+- **M3 Premium experience**: next
+
+See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md), [TESTING.md](TESTING.md) (actual results) and [CONTEXT.md](CONTEXT.md).
 
 ## Quick start (fully offline)
 
@@ -49,6 +53,9 @@ Migrations (including Row Level Security) live in `supabase/migrations/`, which 
 | `npm run db:verify` | Apply migrations + seed to PGlite and print table counts (no credentials needed) |
 | `npm run db:generate` | Generate a migration after editing `src/server/db/schema.ts` |
 | `npm run db:migrate` / `db:seed` | Apply migrations / seed to `DATABASE_URL` |
+| `npm run evidence:embed` | Re-embed the evidence catalogue after editing it |
+| `npm run bench:retrieval` | pgvector vs Qdrant benchmark (local Supabase + Qdrant) |
+| `npm run eval:engines` | Evaluate AI engines on identical synthetic cases |
 | `npm run samples:generate` | Regenerate the synthetic PDF, Apple Health XML and invalid fixtures |
 
 ## Documentation
@@ -60,3 +67,5 @@ Migrations (including Row Level Security) live in `supabase/migrations/`, which 
 - [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) — milestones and checklist
 - [TESTING.md](TESTING.md) — how to test and recorded results
 - [SECURITY.md](SECURITY.md) — health-data safety and security controls
+- [docs/EVIDENCE.md](docs/EVIDENCE.md) — curated evidence sources
+- [docs/RETRIEVAL_BENCHMARK.md](docs/RETRIEVAL_BENCHMARK.md) — pgvector vs Qdrant

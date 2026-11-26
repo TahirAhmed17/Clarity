@@ -28,6 +28,25 @@ export const EvidenceSnippetSchema = z.object({
   text: z.string(),
 });
 
+const ActionCategoryEnum = z.enum(["movement", "nutrition", "sleep", "supplement", "professional", "other"]);
+
+export const RecommendationSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  detail: z.string(),
+  category: ActionCategoryEnum,
+  reasons: z.array(z.string()),
+  evidenceChunkIds: z.array(z.string()),
+});
+
+export const SystemSummarySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  dataState: z.enum(["none", "partial", "complete"]),
+  summary: z.string(),
+  missingPrimary: z.array(z.string()),
+});
+
 export const HealthContextSchema = z.object({
   profile: z.object({ goals: z.array(z.string()), routine: z.record(z.string(), z.string()) }),
   symptoms: z.array(z.object({ description: z.string(), severity: z.number().nullable() })),
@@ -36,6 +55,10 @@ export const HealthContextSchema = z.object({
   /** Curated evidence retrieved for this request. Empty until M2 retrieval exists. */
   evidence: z.array(EvidenceSnippetSchema),
   missing: z.array(z.string()),
+  /** Deterministic organ/system summaries (M2.5). */
+  systems: z.array(SystemSummarySchema).default([]),
+  /** Deterministic recommendation (M2.7): the engine explains it, it does not replace it. */
+  recommendation: z.object({ primary: RecommendationSchema, supporting: z.array(RecommendationSchema) }).nullable().default(null),
 });
 
 export const CompanionRequestSchema = z.object({
@@ -45,7 +68,7 @@ export const CompanionRequestSchema = z.object({
 
 /** ---------- Output: what every engine must return ---------- */
 
-const ActionCategory = z.enum(["movement", "nutrition", "sleep", "supplement", "professional", "other"]);
+const ActionCategory = ActionCategoryEnum;
 
 export const EngineOutputSchema = z.object({
   /** 1. What I noticed */
@@ -83,6 +106,12 @@ export const CompanionResponseSchema = EngineOutputSchema.extend({
   }),
   engine: z.string(),
   engineNotice: z.string().nullable(),
+  /** Why the recommendation engine chose the next move. */
+  nextMoveReasons: z.array(z.string()).default([]),
+  /** The curated sources that were supplied as evidence (for display). */
+  sources: z
+    .array(z.object({ chunkId: z.string(), heading: z.string(), publisher: z.string(), title: z.string(), url: z.string(), date: z.string().nullable() }))
+    .default([]),
   disclaimer: z.literal(HEALTH_DISCLAIMER),
 });
 

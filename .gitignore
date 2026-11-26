@@ -43,3 +43,6 @@ next-env.d.ts
 
 # local Claude settings
 .claude/settings.local.json
+
+# local model cache (transformers.js)
+.cache/

@@ -117,6 +117,20 @@ describe("safety validator (engine-independent)", () => {
   });
 });
 
+describe("safety validator — lab values vs doses (regression)", () => {
+  it("keeps lab concentrations intact but still removes doses", async () => {
+    const ctx = await demoContext();
+    const raw: EngineOutput = {
+      ...baseOutput(),
+      whyItMatters: "Ferritin was 13 ug/L, haemoglobin 124 g/L, ALT 38 U/L and LDL 3.5 mmol/L.",
+      nextMove: { title: "Discuss iron", detail: "Some people take 65 mg a day or 200 mg/day — a professional decides.", category: "professional" },
+    };
+    const res = applySafety(raw, ctx, { engine: "test", engineNotice: null });
+    expect(res.whyItMatters).toBe(raw.whyItMatters);
+    expect(res.nextMove.detail).not.toMatch(/65 mg|200 mg/);
+  });
+});
+
 describe("AI service", () => {
   it("answers in mock mode with no key or network, and persists the turn", async () => {
     const repo = new SeedRepository();
