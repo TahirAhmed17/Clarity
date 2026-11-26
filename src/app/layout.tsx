@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Manrope } from "next/font/google";
 import type { ReactNode } from "react";
+import { PreferencesSync } from "@/components/shell/preferences-sync";
 import { BRAND } from "@/lib/constants";
 import "./globals.css";
 
@@ -21,7 +22,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en-GB" className={`${fraunces.variable} ${manrope.variable} h-full antialiased`}>
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        <PreferencesSync />
+        {children}
+      </body>
     </html>
   );
 }

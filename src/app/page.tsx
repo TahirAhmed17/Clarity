@@ -1,4 +1,5 @@
-import { ButtonLink, Orb } from "@/components/ui/primitives";
+import { Orb } from "@/components/orb/orb";
+import { ButtonLink } from "@/components/ui/primitives";
 import { BRAND, getBrandEndorsement, HEALTH_DISCLAIMER } from "@/lib/constants";
 
 /** Interim landing page. The full editorial marketing page is M3.9. */
