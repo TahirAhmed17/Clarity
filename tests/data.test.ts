@@ -6,7 +6,7 @@ import { getDataStatus, getRepository, resetRepository } from "@/server/data";
 import { SeedRepository } from "@/server/data/seed-repository";
 import type { HealthRepository } from "@/server/data/repository";
 import { resetEnvCache } from "@/server/config/env";
-import { createMigratedPglite } from "@/server/db/pglite";
+import { createMigratedPglite, resetDatabase } from "@/server/db/pglite";
 import { seedDatabase, tableCounts } from "@/server/db/seed";
 import { ingestBloodReport } from "@/server/ingestion/service";
 import { _scrubForTest } from "@/server/log";
@@ -88,10 +88,14 @@ function contract(name: string, make: () => Promise<HealthRepository>) {
 }
 
 contract("SeedRepository", async () => new SeedRepository());
+// One shared instance for the whole contract, reset to the seed before each test.
+let contractPg: Awaited<ReturnType<typeof createMigratedPglite>> | undefined;
+afterAll(async () => contractPg?.client.close());
 contract("DrizzleRepository (PGlite)", async () => {
-  const fresh = await createMigratedPglite();
-  await seedDatabase(fresh.db);
-  return new DrizzleRepository(fresh.db);
+  contractPg ??= await createMigratedPglite();
+  await resetDatabase(contractPg.client);
+  await seedDatabase(contractPg.db);
+  return new DrizzleRepository(contractPg.db);
 });
 
 describe("Row Level Security (Supabase policies on PGlite, auth.uid() stub)", () => {
