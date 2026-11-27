@@ -90,6 +90,14 @@ export async function getDataStatus(): Promise<DataStatus> {
   return (await ensureResolved()).status;
 }
 
+/** Replaces the in-memory synthetic store with a fresh copy (seed mode only). Returns false otherwise. */
+export async function resetSeedStore(): Promise<boolean> {
+  const r = await ensureResolved();
+  if (!r.seed) return false;
+  r.seed = new SeedRepository();
+  return true;
+}
+
 /** Test helper. */
 export function resetRepository() {
   store.__clarityData = undefined;

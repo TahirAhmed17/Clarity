@@ -31,6 +31,13 @@ const EnvSchema = z.object({
   LINGSANTE_MODEL_ID: optionalString,
   OPENROUTER_BASE_URL: z.preprocess(emptyToUndefined, z.string().url().default("https://openrouter.ai/api/v1")),
 
+  /**
+   * Allows "Reset demo" when connected to a DATABASE. Off by default: in database mode a reset
+   * deletes every health record on the demo profile (including anything uploaded to it).
+   * Seed mode can always reset (it only touches in-memory synthetic data).
+   */
+  DEMO_RESET_ALLOWED: z.preprocess(emptyToUndefined, z.enum(["true", "false"]).default("false")),
+
   MAX_REPORT_UPLOAD_MB: z.coerce.number().positive().max(50).default(10),
   MAX_WEARABLE_UPLOAD_MB: z.coerce.number().positive().max(200).default(50),
 });

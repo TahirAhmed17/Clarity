@@ -74,7 +74,7 @@ const recToContext = (r: Recommendation) => ({ id: r.id, title: r.title, detail:
 export async function respond(
   profileId: string,
   question: string | null,
-  deps: { repo: HealthRepository; env: ServerEnv; retriever?: Retriever | null; engineOverride?: AIEngine },
+  deps: { repo: HealthRepository; env: ServerEnv; retriever?: Retriever | null; engineOverride?: AIEngine; /** false = don't save the turn (warm-up). */ persist?: boolean },
 ): Promise<CompanionResponse> {
   const { repo, env } = deps;
   const q = question?.trim() || null;
@@ -134,7 +134,9 @@ export async function respond(
   };
   log.info("ai.respond", { engine: used.id, durationMs: Date.now() - started, count: evidence.length });
 
-  if (q) await repo.addMessage(profileId, { role: "user", content: q, structured: null, engine: null });
-  await repo.addMessage(profileId, { role: "assistant", content: response.nextMove.title, structured: response, engine: used.id });
+  if (deps.persist !== false) {
+    if (q) await repo.addMessage(profileId, { role: "user", content: q, structured: null, engine: null });
+    await repo.addMessage(profileId, { role: "assistant", content: response.nextMove.title, structured: response, engine: used.id });
+  }
   return response;
 }

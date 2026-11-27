@@ -7,6 +7,7 @@ import { PostButton } from "@/components/features/post-button";
 import { RoutineEditor } from "@/components/features/routine-editor";
 import { Badge, Card, PageHeader, ProvenanceTag, SectionHeading } from "@/components/ui/primitives";
 import { listEngines } from "@/server/ai/factory";
+import { canResetDemo } from "@/server/demo/reset";
 import { loadPageData } from "@/server/session";
 
 export const metadata: Metadata = { title: "Profile" };
@@ -18,6 +19,7 @@ async function ProfileContent() {
   const [profile, documents, biomarkers] = await Promise.all([repo.getProfile(profileId), repo.listDocuments(profileId), repo.listBiomarkers(profileId)]);
   if (!profile) return null;
   const corrected = biomarkers.filter((b) => b.correction);
+  const resettable = await canResetDemo(env);
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -82,6 +84,22 @@ async function ProfileContent() {
             ))}
           </ul>
         </Card>
+
+        {resettable && (
+          <Card>
+            <SectionHeading title="Demo">
+              Put everything back to the starting synthetic state: uploads, plans, conversations and reviews are cleared. Use it between run-throughs.
+            </SectionHeading>
+            <PostButton
+              url="/api/demo/reset"
+              body={{ confirm: "RESET" }}
+              label="Reset demo"
+              variant="secondary"
+              confirm="Clear this demo and start again?"
+              pendingLabel="Resetting…"
+            />
+          </Card>
+        )}
 
         <Card>
           <SectionHeading title="Export or delete everything">Download all your data as a file, or remove every health record Clarity holds.</SectionHeading>

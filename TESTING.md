@@ -20,6 +20,16 @@ npm run bench:retrieval # needs local Supabase + Qdrant on :6333
 npm run eval:engines    # engine evaluation; engines without keys are reported as skipped
 ```
 
+## Recorded results — demo readiness (2026-11-27)
+
+| Check | Result |
+| --- | --- |
+| `tsc`, `eslint` | ✅ clean |
+| `vitest run` | ✅ **78 / 78** (adds 4 demo tests: seed reset restores state and allows re-upload; database reset refused by default; database reset with `DEMO_RESET_ALLOWED=true` wipes and re-seeds on PGlite; warm-up saves no messages) |
+| `npm run demo` | ✅ healthy in seed mode; warm-up 771 ms cold (embedding model 720 ms), 18 ms warm; 8 pages pre-rendered in 48–248 ms; access code never printed |
+| Reset over HTTP (seed) | ✅ duplicate upload → 409; reset without `confirm` → 400; reset → 200; same upload afterwards → 201 |
+| Reset in the browser | ✅ Profile → Reset demo → confirm → "Demo reset to its starting synthetic state."; records back to the seeded history only |
+
 ## Recorded results — motion pass (2026-11-27)
 
 | Check | Result |
