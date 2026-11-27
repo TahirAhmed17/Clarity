@@ -20,12 +20,33 @@ npm run bench:retrieval # needs local Supabase + Qdrant on :6333
 npm run eval:engines    # engine evaluation; engines without keys are reported as skipped
 ```
 
+## Recorded results — 7-point local walkthrough (2026-11-27, `npm run demo`, seed mode, synthetic files only)
+
+| # | Area | Result |
+| --- | --- | --- |
+| 1 | Home: upload PDF + Apple Health XML, ask | ✅ 21 results, 5 flagged, answer follows; "Imported 56 daily wearable values"; follow-up question answered |
+| 2 | Insights: expand, correct, ask | ✅ expand shows sources; correcting Ferritin 13→16 moves it into range (4 flagged everywhere: Insights, Plan, Discover, Timeline); "Ask Clarity about this" asks on Home |
+| 3 | Body: systems, 2D | ✅ Liver/Kidneys detail; urine ACR listed as *Not measured*; 3D figure renders, 3D off → 2D map |
+| 4 | Plan: done/skip/refresh | ✅ statuses and history recorded; skipped step lowered with a visible reason |
+| 5 | Discover: book, supplements | ✅ mock booking; Vitamin D + soluble fibre await review; no iron after the Ferritin correction; re-check doesn't duplicate |
+| 6 | Doctor | ✅ wrong code rejected in the UI; signed-in review via API: 401 without session, 400 approve without dose, 200 approve/reject; member side shows dose, note and "simulated" labels; timeline records both |
+| 7 | Bad files | ✅ all five `samples/invalid/` files plus an XML in the PDF picker give specific messages |
+
+Bugs found and fixed:
+- After a user correction, the lab's printed flag still produced "flagged low on the report but within the printed range". The flag described the value as first read, so it's now ignored once corrected (test added).
+- `/app?q=…` kept `q` in the address bar, so a refresh asked the same question again. It's now cleared once asked.
+- One skip had no effect (only 2+ did), though the Plan page says skipped steps are de-prioritised. One skip now lowers the step a little, with a reason shown (test added).
+- Copy: "1 result(s)" → proper singular/plural; "my kidneys results" → "Ask Clarity about these results"; steps shown as "5,950".
+- Layout/sources: expanding one insight card no longer stretches its neighbour; a source page used for several sections is listed once, with its sections.
+
+Not a bug: in a *hidden* browser pane, streamed pages aren't revealed until a frame is painted, so the 3D orb/body appear only once the pane is visible.
+
 ## Recorded results — demo readiness (2026-11-27)
 
 | Check | Result |
 | --- | --- |
 | `tsc`, `eslint` | ✅ clean |
-| `vitest run` | ✅ **78 / 78** (adds 4 demo tests: seed reset restores state and allows re-upload; database reset refused by default; database reset with `DEMO_RESET_ALLOWED=true` wipes and re-seeds on PGlite; warm-up saves no messages) |
+| `vitest run` | ✅ **78 / 78** (80 after the walkthrough fixes above) (adds 4 demo tests: seed reset restores state and allows re-upload; database reset refused by default; database reset with `DEMO_RESET_ALLOWED=true` wipes and re-seeds on PGlite; warm-up saves no messages) |
 | `npm run demo` | ✅ healthy in seed mode; warm-up 771 ms cold (embedding model 720 ms), 18 ms warm; 8 pages pre-rendered in 48–248 ms; access code never printed |
 | Reset over HTTP (seed) | ✅ duplicate upload → 409; reset without `confirm` → 400; reset → 200; same upload afterwards → 201 |
 | Reset in the browser | ✅ Profile → Reset demo → confirm → "Demo reset to its starting synthetic state."; records back to the seeded history only |

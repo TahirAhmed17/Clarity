@@ -37,7 +37,7 @@ This builds if needed, starts the app on **http://localhost:3200** with syntheti
 | 5 | Home | Ask: *"Why am I tired in the afternoons?"* | Follow-up questions use the same evidence and data. |
 | 6 | Insights | Scroll the "Worth a closer look" cards. Open LDL's "What this measures". | Each card: value, the lab's band, history since April, and where the number came from. |
 | 7 | Body | Select **Liver**, then **Kidneys**. | System by system, with no scores. Kidneys: urine ACR wasn't measured, and *missing* is never shown as *normal*. |
-| 8 | Plan | Mark one step **done**, skip another, then **Refresh plan**. | The plan adapts: skipped steps are de-prioritised. |
+| 8 | Plan | **Create my plan** if it's empty. Mark one step **done**, skip another, then **Refresh plan**. | The plan adapts: the skipped step now says "lowered a little because you skipped it last time", and skipping it again drops it further. |
 | 9 | Discover | Show an event's *Why you*. Click **Check what may be relevant**. | Supplements are only suggested as a category, never with a dose, and wait for review. |
 | 10 | `/doctor` | Sign in with the access code. Approve vitamin D with a dose. | A simulated reviewer workspace, clearly labelled. Only a reviewer can set a dose, and it's access-controlled. |
 | 11 | Discover → Timeline | Show the approved suggestion, then the timeline. | Every item shows its provenance: extracted, calculated, AI, or your own input. |

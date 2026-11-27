@@ -83,7 +83,7 @@ export function ReportReveal({ filename, collectedOn, summary }: { filename: str
           })}
         </ul>
       )}
-      {summary.notCompared > 0 && <p className="mt-3 text-xs text-ink-faint">{summary.notCompared} result(s) had no usable range, so they weren&apos;t compared.</p>}
+      {summary.notCompared > 0 && <p className="mt-3 text-xs text-ink-faint">{summary.notCompared === 1 ? "1 result had" : `${summary.notCompared} results had`} no usable range, so {summary.notCompared === 1 ? "it wasn't" : "they weren't"} compared.</p>}
     </section>
   );
 }
