@@ -160,3 +160,19 @@ describe("logger", () => {
     expect(_scrubForTest({ count: 3, valueText: "13", description: "tired" } as never)).toEqual({ count: 3 });
   });
 });
+
+describe("schema drift check", () => {
+  it("reports migrations the database hasn't applied, and stays silent without a tracking table", async () => {
+    const { EXPECTED_MIGRATIONS, missingMigrations } = await import("@/server/db/schema-check");
+    const { client, db } = await createMigratedPglite();
+    try {
+      // PGlite is migrated by Drizzle, so the Supabase tracking table doesn't exist → no false alarm.
+      expect(await missingMigrations(db)).toBeNull();
+      await client.exec(`create schema supabase_migrations; create table supabase_migrations.schema_migrations (version text primary key);`);
+      await client.query(`insert into supabase_migrations.schema_migrations (version) select unnest($1::text[])`, [EXPECTED_MIGRATIONS.slice(0, -1)]);
+      expect(await missingMigrations(db)).toEqual([EXPECTED_MIGRATIONS[EXPECTED_MIGRATIONS.length - 1]]);
+    } finally {
+      await client.close();
+    }
+  });
+});

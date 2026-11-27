@@ -45,7 +45,7 @@ npm run db:migrate              # applies supabase/migrations
 npm run db:seed                 # idempotent synthetic seed
 ```
 
-Migrations (including Row Level Security) live in `supabase/migrations/`, which the Supabase GitHub integration applies; `npm run db:migrate` applies the same files manually. If the database is unreachable and `DATA_MODE=auto`, the app falls back to seed data and says so.
+Migrations (including Row Level Security) live in `supabase/migrations/`, which the Supabase GitHub integration applies; `npm run db:migrate` applies the same files manually. **After pulling new code, run `npm run db:migrate`.** If your local database is missing a migration, the app header shows "Database needs updating" and `/api/health` lists the pending versions. If the database is unreachable and `DATA_MODE=auto`, the app falls back to seed data and says so.
 
 ## Scripts
 

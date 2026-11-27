@@ -11,6 +11,11 @@ export async function StatusChip() {
   return (
     <div className="flex flex-wrap items-center gap-1.5" title={status.reason}>
       <Badge tone={status.mode === "database" ? "teal" : "neutral"}>{status.mode === "database" ? "Database" : "Seed data (offline)"}</Badge>
+      {status.pendingMigrations?.length ? (
+        <Badge tone="coral" title="Run: npm run db:migrate">
+          Database needs updating
+        </Badge>
+      ) : null}
       <Badge tone="mist">AI: {env.AI_ENGINE}</Badge>
     </div>
   );

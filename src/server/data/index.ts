@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { getEnv } from "../config/env";
 import { createDb } from "../db/client";
+import { missingMigrations } from "../db/schema-check";
 import { log } from "../log";
 import { DrizzleRepository, type ClarityDb } from "./drizzle-repository";
 import type { HealthRepository } from "./repository";
@@ -9,6 +10,8 @@ import { SeedRepository } from "./seed-repository";
 export interface DataStatus {
   mode: "database" | "seed";
   reason: string;
+  /** Migrations the code expects but the database hasn't applied (run `npm run db:migrate`). */
+  pendingMigrations?: string[];
 }
 
 /**
@@ -51,7 +54,14 @@ async function resolveData(): Promise<Resolution> {
   try {
     const db = createDb(env.DATABASE_URL, env.DATABASE_CONNECT_TIMEOUT_MS) as unknown as ClarityDb;
     await withTimeout(db.execute(sql`select 1`), env.DATABASE_CONNECT_TIMEOUT_MS);
-    return { db, status: { mode: "database", reason: "Connected to Postgres" } };
+    const pending = await missingMigrations(db);
+    if (pending?.length) log.warn("data.schema_behind", { count: pending.length });
+    return {
+      db,
+      status: pending?.length
+        ? { mode: "database", reason: `Connected, but ${pending.length} database migration(s) are not applied. Run: npm run db:migrate`, pendingMigrations: pending }
+        : { mode: "database", reason: "Connected to Postgres" },
+    };
   } catch (err) {
     if (env.DATA_MODE === "database") throw err;
     const reason = `Database unreachable (${err instanceof Error ? err.message : "unknown error"}) — using bundled synthetic seed data`;
