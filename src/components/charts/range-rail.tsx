@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { RangeStatus } from "@/lib/domain";
 
 /**
@@ -11,6 +12,7 @@ export function RangeRail({
   high,
   status,
   label,
+  revealDelayMs,
 }: {
   value: number | null;
   low: number | null;
@@ -18,6 +20,8 @@ export function RangeRail({
   status: RangeStatus;
   /** Accessible description, e.g. "13 ug/L, below the lab range 15 – 150". */
   label: string;
+  /** When set, the marker glides in from the band's start after this delay (reduced motion: instant). */
+  revealDelayMs?: number;
 }) {
   if (value === null || (low === null && high === null)) {
     return <p className="text-xs text-ink-faint">{value === null ? "Not plotted: reported as a bound, not an exact number." : "No lab range to compare with."}</p>;
@@ -48,8 +52,15 @@ export function RangeRail({
           }}
         />
         <div
-          className="absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-white"
-          style={{ left: `${x(value)}%`, background: outside ? "var(--color-chart-alert)" : "var(--color-chart-mark)" }}
+          className={`absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-white${revealDelayMs !== undefined ? " rail-marker-in" : ""}`}
+          style={
+            {
+              left: `${x(value)}%`,
+              background: outside ? "var(--color-chart-alert)" : "var(--color-chart-mark)",
+              "--from": `${bandStart}%`,
+              "--d": `${revealDelayMs ?? 0}ms`,
+            } as CSSProperties
+          }
         />
       </div>
       {low !== null && (

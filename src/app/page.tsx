@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { RangeRail } from "@/components/charts/range-rail";
+import { HeroOrb } from "@/components/landing/hero-orb";
 import { HowItWorks } from "@/components/landing/how-it-works";
 import { Orb } from "@/components/orb/orb";
 import { Badge, ButtonLink } from "@/components/ui/primitives";
@@ -10,6 +12,9 @@ export const metadata: Metadata = {
   title: { absolute: `${BRAND.name}: ${BRAND.tagline}` },
   description: "Clarity reads your blood report and wearable data against your own lab's ranges and gives you one clear next move, with the evidence a tap away.",
 };
+
+/** CSS animation delay via a custom property (see .reveal-line / .fade-up in globals.css). */
+const delay = (ms: number) => ({ "--d": `${ms}ms` }) as CSSProperties;
 
 const FEATURES = [
   { title: "Your lab's ranges, not generic ones", body: "Results are compared only with the range printed on your report. Nothing is invented, and missing data is never treated as normal." },
@@ -52,16 +57,20 @@ export default function LandingPage() {
           </header>
           <div className="grid flex-1 items-center gap-10 py-12 lg:grid-cols-[1.6fr_1fr]">
             <div className="order-2 lg:order-1">
+              {/* Intro: each line rises out of its own mask, then the copy and actions follow. Pure CSS. */}
               <h1 className="font-display text-5xl leading-[0.98] tracking-tight text-balance text-ink sm:text-6xl">
-                Know your numbers.
-                <br />
-                Know your next move.
+                <span className="reveal-line">
+                  <span style={delay(150)}>Know your numbers.</span>
+                </span>
+                <span className="reveal-line">
+                  <span style={delay(300)}>Know your next move.</span>
+                </span>
               </h1>
-              <p className="mt-6 max-w-xl text-lg text-ink-soft sm:text-xl">
+              <p className="fade-up mt-6 max-w-xl text-lg text-ink-soft sm:text-xl" style={delay(620)}>
                 Clarity reads your blood report and wearable data, compares every result with your own lab&apos;s ranges, and tells you the one thing worth doing
                 next.
               </p>
-              <div className="mt-8 flex flex-wrap items-center gap-4">
+              <div className="fade-up mt-8 flex flex-wrap items-center gap-4" style={delay(760)}>
                 <ButtonLink href="/app" className="h-12 px-7 text-base">
                   Try Clarity Now
                 </ButtonLink>
@@ -69,10 +78,16 @@ export default function LandingPage() {
                   See how it works
                 </a>
               </div>
-              <p className="mt-6 text-sm text-ink-faint">This demo runs on synthetic data. It isn&apos;t medical advice.</p>
+              <p className="fade-up mt-6 text-sm text-ink-faint" style={delay(880)}>
+                This demo runs on synthetic data. It isn&apos;t medical advice.
+              </p>
             </div>
             <div className="order-1 flex justify-center lg:order-2">
-              <Orb size={260} className="sm:size-[360px] lg:size-[420px]" />
+              <HeroOrb>
+                <div className="orb-intro">
+                  <Orb size={260} className="sm:size-[360px] lg:size-[420px]" />
+                </div>
+              </HeroOrb>
             </div>
           </div>
         </div>

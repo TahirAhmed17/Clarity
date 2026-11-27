@@ -152,12 +152,62 @@ body {
     var(--color-aqua);
 }
 
+/* ---------- Landing intro (pure CSS: content never depends on JS to become visible) ---------- */
+.reveal-line {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.08em; /* room for descenders inside the mask */
+}
+.reveal-line > span {
+  display: inline-block;
+  animation: line-up 0.95s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+.fade-up {
+  animation: fade-up 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+.orb-intro {
+  animation: orb-in 1.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes line-up {
+  from {
+    transform: translateY(105%);
+  }
+}
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+@keyframes orb-in {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+    filter: blur(10px);
+  }
+}
+
+/* ---------- Results reveal: range-rail marker glides from the band's start to its value ---------- */
+.rail-marker-in {
+  animation: rail-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes rail-in {
+  from {
+    left: var(--from, 0%);
+    opacity: 0;
+  }
+}
+
 /* User preference set in Profile: calmer visuals regardless of OS setting. */
 html[data-reduce-motion="true"] *,
 html[data-reduce-motion="true"] *::before,
 html[data-reduce-motion="true"] *::after {
   animation-duration: 0.001ms !important;
   animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
   transition-duration: 0.001ms !important;
 }
 
@@ -167,6 +217,7 @@ html[data-reduce-motion="true"] *::after {
   *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
     transition-duration: 0.001ms !important;
   }
 }

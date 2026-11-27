@@ -73,7 +73,9 @@ Validator result: lightness band, chroma floor, CVD ΔE 10.9 and contrast ≥ 3:
 ### Motion
 
 - **Orb:** shader uniforms ease towards per-state targets. With reduced motion (OS setting or the Profile toggle) it becomes the static CSS orb.
-- **Landing:** a single orchestrated moment, the pinned "How it works" sequence, on desktop only.
+- **Landing intro (CSS only):** headline lines rise out of masks, then the copy and actions fade up, and the orb settles in (scale + blur). Content never depends on JavaScript to become visible; reduced motion zeroes durations **and delays**.
+- **Landing scroll (GSAP, desktop only):** the hero orb recedes as you scroll; a lightweight CSS hand-off orb grows in beside the pinned "How it works" steps, and its state follows the active step (listening → thinking → answering), reversible.
+- **Results reveal:** after a report upload, the companion shows a "Report read" summary: counts tween up, flagged results fade in staggered, and each range-rail marker glides from the band's start to its value (CSS `rail-in`, reduced motion = instant).
 - **Framer Motion (`motion`)** is used only for expanding detail and new messages.
 
 ### 3D and fallbacks
