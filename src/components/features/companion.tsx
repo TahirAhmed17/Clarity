@@ -7,9 +7,15 @@ import { Button } from "@/components/ui/primitives";
 import type { ChatMessage } from "@/lib/domain";
 import { useReducedMotion } from "@/lib/preferences";
 import type { CompanionResponse } from "@/server/ai/schemas";
+import { summarizeReport, type ExtractedResult, type ReportSummary } from "@/lib/report-summary";
 import { CompanionResponseView } from "./companion-response";
+import { ReportReveal } from "./report-reveal";
 
-type Turn = { id: string; role: "user"; text: string } | { id: string; role: "assistant"; res: CompanionResponse } | { id: string; role: "notice"; text: string; tone: "info" | "error" };
+type Turn =
+  | { id: string; role: "user"; text: string }
+  | { id: string; role: "assistant"; res: CompanionResponse }
+  | { id: string; role: "notice"; text: string; tone: "info" | "error" }
+  | { id: string; role: "report"; filename: string; collectedOn: string | null; summary: ReportSummary };
 
 const STARTERS = ["Give me an overview of my results", "Why am I tired in the afternoons?", "How has my cholesterol changed?", "Help me sleep more consistently"];
 
@@ -100,7 +106,10 @@ export function Companion({ initialMessages, greeting, initialQuestion }: { init
     try {
       if (kind === "report") {
         const j = await upload("/api/ingest/report", file);
-        setTurns((t) => [...t, { id: crypto.randomUUID(), role: "notice", tone: "info", text: `Read ${j.biomarkers.length} results from ${file.name}${j.document.collectedOn ? ` (collected ${j.document.collectedOn})` : ""}.` }]);
+        setTurns((t) => [
+          ...t,
+          { id: crypto.randomUUID(), role: "report", filename: file.name, collectedOn: j.document.collectedOn, summary: summarizeReport(j.biomarkers as ExtractedResult[]) },
+        ]);
         setBusy(false);
         await ask("Give me an overview of my latest results");
         return;
@@ -147,6 +156,7 @@ export function Companion({ initialMessages, greeting, initialQuestion }: { init
                   <p className={t.tone === "error" ? "rounded-2xl bg-coral-soft px-4 py-3 text-sm text-coral-ink" : "text-sm text-ink-soft"}>{t.text}</p>
                 )}
                 {t.role === "assistant" && <CompanionResponseView res={t.res} compact={t.id !== lastAssistant} />}
+                {t.role === "report" && <ReportReveal filename={t.filename} collectedOn={t.collectedOn} summary={t.summary} />}
               </motion.li>
             ))}
           </AnimatePresence>

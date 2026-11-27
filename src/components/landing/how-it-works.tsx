@@ -38,10 +38,32 @@ export function HowItWorks() {
       const mm = gsap.matchMedia();
       mm.add("(min-width: 1024px)", () => {
         const steps = gsap.utils.toArray<HTMLElement>("[data-step]", root.current);
+        const handoff = root.current!.querySelector<HTMLElement>("[data-handoff-orb]");
+        const orbStates = ["listening", "thinking", "answering"];
         gsap.set(steps, { opacity: 0.25 });
         gsap.set(steps[0], { opacity: 1 });
+        // The hand-off orb grows in as the hero orb recedes above.
+        if (handoff) {
+          gsap.fromTo(
+            handoff,
+            { scale: 0.4, opacity: 0 },
+            { scale: 1, opacity: 1, ease: "none", scrollTrigger: { trigger: root.current, start: "top 85%", end: "top top", scrub: 0.5 } },
+          );
+        }
         const tl = gsap.timeline({
-          scrollTrigger: { trigger: root.current, start: "top top", end: "+=1400", scrub: 0.6, pin: true },
+          scrollTrigger: {
+            trigger: root.current,
+            start: "top top",
+            end: "+=1400",
+            scrub: 0.6,
+            pin: true,
+            // The orb mirrors the active step (scrolling back up works too).
+            onUpdate: (self) => {
+              if (!handoff) return;
+              const i = Math.min(steps.length - 1, Math.floor(self.progress * steps.length));
+              handoff.dataset.state = orbStates[i] ?? "idle";
+            },
+          },
         });
         steps.forEach((el, i) => {
           if (i === 0) return;
@@ -65,6 +87,8 @@ export function HowItWorks() {
             How it works
           </h2>
           <p className="mt-4 max-w-sm text-lg text-ink-soft">Three steps. The complicated part happens in the middle, out of your way.</p>
+          {/* Lightweight CSS orb (no second WebGL context); its state follows the active step. */}
+          <div aria-hidden data-handoff-orb data-state="listening" className="orb mt-10 hidden size-28 lg:block" />
         </div>
         <ol className="relative space-y-10 pl-10">
           <span aria-hidden className="absolute top-2 bottom-2 left-3 w-px bg-line" />

@@ -20,6 +20,20 @@ npm run bench:retrieval # needs local Supabase + Qdrant on :6333
 npm run eval:engines    # engine evaluation; engines without keys are reported as skipped
 ```
 
+## Recorded results — motion pass (2026-11-27)
+
+| Check | Result |
+| --- | --- |
+| `tsc`, `eslint` | ✅ clean |
+| `vitest run` | ✅ **74 / 74** (adds report-summary tests) |
+| `next build` | ✅ |
+| Landing intro (1280 px, visible pane) | ✅ `line-up` / `fade-up` / `orb-in` attached; settle to identity transform, opacity 1, no blur within 5 s. In a *hidden* pane Chromium pauses CSS animations; fast-forwarding them confirmed the same end state, so nothing can stay hidden |
+| Hero orb scroll | ✅ at 500 px scroll: scale 0.73, drifted, opacity ≈0.48 |
+| Hand-off orb | ✅ fades in on approach (≈0.57 → 1); state listening → thinking → answering with the active step; scrolling back up returns to listening |
+| Results reveal (synthetic PDF via the companion upload input) | ✅ "Report read: 21 results, 5 outside your lab's range"; counts 21 / 15 / 5; 5 flagged rows; 5 markers mid-glide at 2 s; overview answer follows |
+| Reduced motion | ✅ marker glide duration ≈0 and delay 0 |
+| 390 px | ✅ reveal stacks, no horizontal overflow |
+
 ## Recorded results — M3 (2026-11-27, Windows 11, Node 22.17)
 
 | Check | Result |
