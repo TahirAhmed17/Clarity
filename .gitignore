@@ -46,3 +46,8 @@ next-env.d.ts
 
 # local model cache (transformers.js)
 .cache/
+
+# playwright
+/test-results/
+/playwright-report/
+/blob-report/

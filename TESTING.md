@@ -6,7 +6,10 @@
 npm run check        # tsc --noEmit + eslint + vitest
 npm run db:verify    # migrations + seed on in-process Postgres (PGlite)
 npm run build        # production build
+npm run test:e2e     # build + Playwright walkthrough (or `npm run e2e` against an existing build)
 ```
+
+The Playwright walkthrough (`e2e/walkthrough.spec.ts`) follows `docs/DEMO_SCRIPT.md` on a production server it starts itself on port 3300, in seed mode with the mock AI engine and test-only reviewer credentials. CI runs it on every push and pull request (`.github/workflows/ci.yml`).
 
 Tests live in `tests/`. Database tests use **PGlite**, a real Postgres build running in-process. The same `supabase/migrations/` files that Supabase gets are applied there, so no credentials are needed.
 
@@ -19,6 +22,18 @@ npm run db:seed
 npm run bench:retrieval # needs local Supabase + Qdrant on :6333
 npm run eval:engines    # engine evaluation; engines without keys are reported as skipped
 ```
+
+## Recorded results — Playwright walkthrough + CI (2026-11-27)
+
+| Check | Result |
+| --- | --- |
+| `tsc`, `eslint` | ✅ clean |
+| `vitest run` | ✅ 80 / 80 |
+| `playwright test` | ✅ **10 / 10**, about 17 s, then 3 more full runs all green (no flakes) |
+
+Walkthrough coverage: landing → app; report and Apple Health upload; one next move with disclaimer; follow-up question; duplicate upload blocked; three bad files; Insights counts, grouped sources and a user correction (no false flag warning); `?q=` asked once and cleared; Body kidneys "Not measured"; Plan done/skip/refresh with the skip reason; Discover mock booking and supplement suggestions (no duplicates); doctor 401 for members, wrong code rejected, approve refused without a dose, approve with dose visible to the member and on the timeline; Profile reset.
+
+Bug found by the walkthrough and fixed: choosing the **same file again** in the Home composer did nothing (the input kept its value, so no change event fired). That's exactly what a presenter does after "You've already uploaded this report". The input is now cleared after each pick.
 
 ## Recorded results — 7-point local walkthrough (2026-11-27, `npm run demo`, seed mode, synthetic files only)
 

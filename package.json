@@ -19,7 +19,9 @@
     "evidence:embed": "tsx scripts/embed-evidence.ts",
     "bench:retrieval": "tsx scripts/benchmark-retrieval.ts",
     "eval:engines": "tsx scripts/eval-engines.ts",
-    "demo": "tsx scripts/demo.ts"
+    "demo": "tsx scripts/demo.ts",
+    "test:e2e": "next build && playwright test",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@google/genai": "^3.6.1",
@@ -43,6 +45,7 @@
   "devDependencies": {
     "@electric-sql/pglite": "^0.6.0",
     "@electric-sql/pglite-pgvector": "^0.1.0",
+    "@playwright/test": "^1.65.1",
     "@tailwindcss/turbopack": "4.3.3",
     "@types/node": "^22.20.7",
     "@types/react": "^19",

@@ -104,6 +104,13 @@ export function Companion({ initialMessages, greeting, initialQuestion }: { init
 
   useEffect(() => () => clearTimeout(settleTimer.current), []);
 
+  /** Reads the chosen file, then clears the input so picking the same file again still works. */
+  function pick(kind: "report" | "wearable", input: HTMLInputElement) {
+    const file = input.files?.[0];
+    input.value = "";
+    if (file) void onUpload(kind, file);
+  }
+
   async function onUpload(kind: "report" | "wearable", file: File) {
     setBusy(true);
     setOrb("thinking");
@@ -206,11 +213,11 @@ export function Companion({ initialMessages, greeting, initialQuestion }: { init
             <div className="flex flex-wrap gap-1">
               <label className="cursor-pointer rounded-full px-3 py-1.5 text-sm font-medium text-teal-ink hover:bg-mint-soft focus-within:outline-2 focus-within:outline-teal-ink">
                 Add blood report
-                <input type="file" accept="application/pdf,.pdf" className="sr-only" disabled={busy} onChange={(e) => e.target.files?.[0] && onUpload("report", e.target.files[0])} />
+                <input type="file" accept="application/pdf,.pdf" className="sr-only" disabled={busy} onChange={(e) => pick("report", e.currentTarget)} />
               </label>
               <label className="cursor-pointer rounded-full px-3 py-1.5 text-sm font-medium text-teal-ink hover:bg-mint-soft focus-within:outline-2 focus-within:outline-teal-ink">
                 Add Apple Health export
-                <input type="file" accept=".xml,application/xml,text/xml" className="sr-only" disabled={busy} onChange={(e) => e.target.files?.[0] && onUpload("wearable", e.target.files[0])} />
+                <input type="file" accept=".xml,application/xml,text/xml" className="sr-only" disabled={busy} onChange={(e) => pick("wearable", e.currentTarget)} />
               </label>
             </div>
             <Button type="submit" disabled={busy || !question.trim()}>

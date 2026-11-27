@@ -57,6 +57,8 @@ Migrations (including Row Level Security) live in `supabase/migrations/`, which 
 | `npm run demo` | One-command demo: build, start on :3200 in seed mode, warm up, pre-render (`--port`, `--rebuild`, `--database`) |
 | `npm run check` | typecheck + lint + tests |
 | `npm test` | Vitest suite (includes migrations on in-process Postgres via PGlite) |
+| `npm run test:e2e` | Build, then run the Playwright walkthrough of the demo script (seed mode, mock AI, port 3300) |
+| `npm run e2e` | The Playwright walkthrough against the existing build |
 | `npm run db:verify` | Apply migrations + seed to PGlite and print table counts (no credentials needed) |
 | `npm run db:generate` | Generate a migration after editing `src/server/db/schema.ts` |
 | `npm run db:migrate` / `db:seed` | Apply migrations / seed to `DATABASE_URL` |
@@ -64,6 +66,10 @@ Migrations (including Row Level Security) live in `supabase/migrations/`, which 
 | `npm run bench:retrieval` | pgvector vs Qdrant benchmark (local Supabase + Qdrant) |
 | `npm run eval:engines` | Evaluate AI engines on identical synthetic cases |
 | `npm run samples:generate` | Regenerate the synthetic PDF, Apple Health XML and invalid fixtures |
+
+## Continuous integration
+
+Every push to `main` and every pull request runs [.github/workflows/ci.yml](.github/workflows/ci.yml): typecheck, lint, the Vitest suite, a production build, and the Playwright walkthrough. CI uses synthetic seed data and the offline mock engine, so it needs no secrets. If the walkthrough fails, the Playwright report and traces are attached to the run.
 
 ## Documentation
 
