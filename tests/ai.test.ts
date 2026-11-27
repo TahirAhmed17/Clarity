@@ -192,3 +192,17 @@ describe("LLM adapters (offline checks only)", () => {
     expect(() => extractJson("x", "no json here")).toThrow(/did not return JSON/);
   });
 });
+
+describe("unit conversions for common lab layouts", () => {
+  it("converts cells/cmm and lakhs/cmm counts and month-name units safely", async () => {
+    const { toCanonical } = await import("@/server/biomarkers/definitions");
+    expect(toCanonical("WBC", 7450, "Cells/cmm")).toMatchObject({ ok: true, value: 7.45, unit: "10^9/L" });
+    expect(toCanonical("PLT", 2.4, "Lakhs/cmm")).toMatchObject({ ok: true, value: 240 });
+    expect(toCanonical("TSH", 2.1, "μIU/mL")).toMatchObject({ ok: true, value: 2.1 });
+    expect(toCanonical("ESR", 10, "mm after 1hr")).toMatchObject({ ok: true, value: 10 });
+    const { parsePrintedNumber } = await import("@/server/biomarkers/range");
+    expect(parsePrintedNumber("11,860")).toBe(11860);
+    expect(parsePrintedNumber("5,2")).toBe(5.2);
+    expect(Number.isNaN(parsePrintedNumber("1234,567"))).toBe(true);
+  });
+});

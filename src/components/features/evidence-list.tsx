@@ -12,7 +12,7 @@ export function EvidenceList({ items, title = "Sources" }: { items: EvidenceRef[
   if (items.length === 0) return null;
   return (
     <div>
-      <p className="mb-1.5 text-xs font-semibold tracking-wide text-ink-faint uppercase">{title}</p>
+      <p className="mb-1.5 text-sm font-medium text-ink-soft">{title}</p>
       <ul className="space-y-1.5">
         {items.map((e) => (
           <li key={e.chunkId} className="text-sm">
@@ -20,9 +20,9 @@ export function EvidenceList({ items, title = "Sources" }: { items: EvidenceRef[
               {e.title}
             </a>
             <span className="text-ink-faint">
-              {" "}
-              · {e.publisher}
-              {e.date ? ` · ${e.date}` : ""}
+              {", "}
+              {e.publisher}
+              {e.date ? ` (${e.date})` : ""}
             </span>
             <span className="block text-xs text-ink-soft">{e.heading}</span>
           </li>

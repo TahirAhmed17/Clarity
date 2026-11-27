@@ -28,14 +28,28 @@ export function ButtonLink({ variant = "primary", className, ...props }: Compone
 
 /* ---------------- Card ---------------- */
 
-export function Card({ className, ...props }: ComponentProps<"section">) {
-  return <section className={cn("rounded-[var(--radius-card)] bg-surface p-5 shadow-[var(--shadow-soft)] ring-1 ring-line/70 sm:p-6", className)} {...props} />;
+/**
+ * Cards are for discrete objects (a biomarker, an event). Use `raised` only for the one thing that
+ * should lift off the page; everything else stays flat on a hairline.
+ */
+export function Card({ className, raised = false, ...props }: ComponentProps<"section"> & { raised?: boolean }) {
+  return (
+    <section
+      className={cn("rounded-[var(--radius-card)] bg-surface p-5 ring-1 ring-line sm:p-6", raised && "shadow-[var(--shadow-soft)] ring-line/60", className)}
+      {...props}
+    />
+  );
+}
+
+/** Open, full-bleed panel on the organic "tide" gradient — reserved for the next move. */
+export function TidePanel({ className, ...props }: ComponentProps<"section">) {
+  return <section className={cn("tide relative overflow-hidden rounded-[2rem] p-6 sm:p-10", className)} {...props} />;
 }
 
 export function SectionHeading({ eyebrow, title, children }: { eyebrow?: string; title: string; children?: ReactNode }) {
   return (
     <header className="mb-4">
-      {eyebrow && <p className="mb-1 text-xs font-semibold tracking-[0.14em] text-teal-ink uppercase">{eyebrow}</p>}
+      {eyebrow && <p className="mb-1 text-sm font-medium text-teal-ink">{eyebrow}</p>}
       <h2 className="font-display text-xl text-ink sm:text-2xl">{title}</h2>
       {children && <p className="mt-1 text-sm text-ink-soft">{children}</p>}
     </header>
@@ -104,10 +118,6 @@ export function EmptyState({ title, children, action }: { title: string; childre
       {action && <div className="mt-4 flex justify-center">{action}</div>}
     </div>
   );
-}
-
-export function Orb({ size = 160, className }: { size?: number; className?: string }) {
-  return <div aria-hidden className={cn("orb shrink-0", className)} style={{ width: size, height: size }} />;
 }
 
 export function PageHeader({ title, children, aside }: { title: string; children?: ReactNode; aside?: ReactNode }) {

@@ -1,25 +1,25 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
-import { ButtonLink, Card, Disclaimer, EmptyState, PageHeader, ProvenanceTag, RangeBadge, SectionHeading } from "@/components/ui/primitives";
-import type { Biomarker } from "@/lib/domain";
+import { DailyChart, type ValueFormat } from "@/components/charts/daily-chart";
+import { BiomarkerCard } from "@/components/features/biomarker-card";
+import { ButtonLink, Disclaimer, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { buildHealthContext } from "@/server/ai/context";
-import { validateBiomarkers } from "@/server/biomarkers/intelligence";
-import { rangeStatus } from "@/server/biomarkers/range";
+import { biomarkerCards, GROUP_ORDER, wearableSeries } from "@/server/insights/view-model";
 import { loadPageData } from "@/server/session";
 
 export const metadata: Metadata = { title: "Health Insights" };
 
-const METRIC_LABEL: Record<string, string> = {
-  steps: "Steps / day",
-  active_energy: "Active energy / day",
-  sleep_asleep: "Time asleep / night",
-  resting_heart_rate: "Resting heart rate",
-  heart_rate: "Average heart rate",
-  hrv_sdnn: "HRV (SDNN)",
-};
+const WEARABLES: { metric: string; title: string; kind: "bar" | "line"; format: ValueFormat; unit: string }[] = [
+  { metric: "steps", title: "Steps", kind: "bar", format: "integer", unit: "steps a day" },
+  { metric: "sleep_asleep", title: "Time asleep", kind: "bar", format: "hours", unit: "hours a night" },
+  { metric: "resting_heart_rate", title: "Resting heart rate", kind: "line", format: "integer", unit: "bpm" },
+  { metric: "hrv_sdnn", title: "Heart rate variability (SDNN)", kind: "line", format: "integer", unit: "ms" },
+  { metric: "active_energy", title: "Active energy", kind: "bar", format: "integer", unit: "kcal a day" },
+];
 
-function provenanceOf(b: Biomarker) {
-  return b.source === "synthetic_seed" ? "synthetic" : b.source === "user_provided" ? "user_provided" : b.source === "calculated" ? "calculated" : "extracted";
+function formatDate(d: string | null) {
+  return d ? new Date(`${d}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }) : "an unknown date";
 }
 
 async function InsightsContent() {
@@ -31,117 +31,85 @@ async function InsightsContent() {
     repo.listSymptoms(profileId),
   ]);
   if (!profile) return <EmptyState title="Profile not found" />;
+  const cards = biomarkerCards(biomarkers);
   const ctx = buildHealthContext({ profile, biomarkers, wearables, symptoms });
-
-  // Latest row per biomarker for display (keeps the full original record).
-  const latest = new Map<string, Biomarker>();
-  for (const b of [...biomarkers].sort((a, b) => (a.observedOn ?? "").localeCompare(b.observedOn ?? ""))) {
-    latest.set(b.code ?? b.nameAsReported.toLowerCase(), b);
-  }
-  const rows = [...latest.values()];
-  // De-duplicate same message across repeat results; warnings first.
-  const issues = [...new Map(validateBiomarkers(biomarkers).map((i) => [i.message, i])).values()].sort((a, b) => (a.severity === b.severity ? 0 : a.severity === "warning" ? -1 : 1));
+  const series = wearableSeries(wearables);
+  const flagged = cards.filter((c) => c.status === "above" || c.status === "below");
+  const latestDate = cards.map((c) => c.observedOn).filter(Boolean).sort().pop() ?? null;
 
   return (
-    <div className="grid gap-5">
-      <Card>
-        <SectionHeading eyebrow="Blood results" title="Latest results">
-          Each result is compared only with the reference range printed by your lab. M3 adds biomarker cards, trends and explanations.
-        </SectionHeading>
-        {rows.length === 0 ? (
-          <EmptyState title="No lab results yet" action={<ButtonLink href="/app/upload">Upload a report</ButtonLink>}>
-            Upload a digital PDF from your lab to see your results here.
-          </EmptyState>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead className="text-xs text-ink-faint uppercase">
-                <tr>
-                  <th className="py-2 pr-3 font-semibold">Test</th>
-                  <th className="py-2 pr-3 font-semibold">Result</th>
-                  <th className="py-2 pr-3 font-semibold">Lab range</th>
-                  <th className="py-2 pr-3 font-semibold">Date</th>
-                  <th className="py-2 pr-3 font-semibold">Status</th>
-                  <th className="py-2 font-semibold">Source</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {rows.map((b) => {
-                  const prev = ctx.biomarkers.find((c) => (c.code ?? c.name) === (b.code ?? b.nameAsReported))?.previous;
-                  return (
-                    <tr key={b.id}>
-                      <td className="py-2.5 pr-3 text-ink">{b.nameAsReported}</td>
-                      <td className="py-2.5 pr-3">
-                        <span className="font-semibold text-ink">{b.valueText}</span> <span className="text-ink-soft">{b.unitAsReported}</span>
-                        {prev && <span className="block text-xs text-ink-faint">was {prev.valueText} on {prev.observedOn}</span>}
-                      </td>
-                      <td className="py-2.5 pr-3 text-ink-soft">{b.refText ?? "—"}</td>
-                      <td className="py-2.5 pr-3 text-ink-soft">{b.observedOn ?? "Unknown"}</td>
-                      <td className="py-2.5 pr-3">
-                        <RangeBadge status={rangeStatus(b.valueNumeric, b.refLow, b.refHigh)} />
-                      </td>
-                      <td className="py-2.5">
-                        <ProvenanceTag kind={provenanceOf(b)} />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+    <div className="space-y-12">
+      {cards.length === 0 ? (
+        <EmptyState title="No lab results yet" action={<ButtonLink href="/app/upload">Upload a report</ButtonLink>}>
+          Upload a digital PDF from your lab and your results will appear here, compared with your lab&apos;s own ranges.
+        </EmptyState>
+      ) : (
+        <>
+          <p className="max-w-2xl font-display text-2xl leading-snug text-ink sm:text-3xl">
+            {cards.length} results, most recently from {formatDate(latestDate)}.{" "}
+            {flagged.length ? `${flagged.length} sit outside your lab's range.` : "None sit outside your lab's range."}
+          </p>
 
-      <Card>
-        <SectionHeading eyebrow="Wearables" title="Last 7 days">
-          Daily aggregates. M3 adds trend charts.
-        </SectionHeading>
-        {ctx.wearables.length === 0 ? (
-          <EmptyState title="No wearable data yet" action={<ButtonLink href="/app/upload#wearable">Upload Apple Health export</ButtonLink>} />
-        ) : (
-          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {ctx.wearables.map((w) => (
-              <div key={w.metric} className="rounded-2xl bg-mist-soft p-4">
-                <dt className="text-xs text-ink-soft">{METRIC_LABEL[w.metric] ?? w.metric}</dt>
-                <dd className="mt-1 font-display text-2xl text-ink">
-                  {w.avg7d === null
-                    ? "—"
-                    : w.metric === "sleep_asleep"
-                      ? `${(w.avg7d / 60).toFixed(1)} h`
-                      : `${Math.round(w.avg7d).toLocaleString("en-GB")} ${w.unit === "count" ? "" : w.unit}`}
-                </dd>
-                <dd className="text-xs text-ink-faint">average over {w.days} days</dd>
+          {flagged.length > 0 && (
+            <section aria-labelledby="attention">
+              <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+                <h2 id="attention" className="font-display text-2xl">
+                  Worth a closer look
+                </h2>
+                <Link href={`/app?q=${encodeURIComponent("Explain the results that are outside my lab's range")}`} className="text-sm font-semibold text-teal-ink underline decoration-teal/40 underline-offset-4">
+                  Ask Clarity to explain these
+                </Link>
               </div>
-            ))}
-          </dl>
-        )}
-      </Card>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {flagged.map((b) => (
+                  <BiomarkerCard key={b.key} b={b} />
+                ))}
+              </div>
+            </section>
+          )}
 
-      {issues.length > 0 && (
-        <Card>
-          <SectionHeading title="Data quality checks">Automatic checks on your records. They help catch unit, entry or extraction problems — they aren&apos;t health findings.</SectionHeading>
-          <ul className="space-y-1.5 text-sm">
-            {issues.map((i) => (
-              <li key={`${i.biomarkerId}-${i.code}`} className="flex gap-2">
-                <span aria-hidden className={i.severity === "warning" ? "text-coral-ink" : "text-ink-faint"}>
-                  {i.severity === "warning" ? "!" : "i"}
-                </span>
-                <span className="text-ink-soft">{i.message}</span>
-              </li>
-            ))}
-          </ul>
-        </Card>
+          {GROUP_ORDER.map((group) => {
+            const rows = cards.filter((c) => c.group === group && !(c.status === "above" || c.status === "below"));
+            if (rows.length === 0) return null;
+            return (
+              <section key={group} aria-label={group}>
+                <h2 className="mb-4 font-display text-2xl">{group}</h2>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {rows.map((b) => (
+                    <BiomarkerCard key={b.key} b={b} />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
+        </>
       )}
 
+      <section aria-labelledby="wearables">
+        <h2 id="wearables" className="mb-1 font-display text-2xl">
+          From your wearable
+        </h2>
+        <p className="mb-4 text-sm text-ink-soft">The last 14 days, one value per day. Where two devices overlap, the imported export is used.</p>
+        {Object.keys(series).length === 0 ? (
+          <EmptyState title="No wearable data yet" action={<ButtonLink href="/app/upload#wearable">Import Apple Health data</ButtonLink>} />
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {WEARABLES.filter((w) => series[w.metric]?.length).map((w) => (
+              <DailyChart key={w.metric} title={w.title} points={series[w.metric]} kind={w.kind} format={w.format} unitLabel={w.unit} />
+            ))}
+          </div>
+        )}
+      </section>
+
       {ctx.missing.length > 0 && (
-        <Card>
-          <SectionHeading title="What's missing" />
-          <ul className="list-disc space-y-1 pl-5 text-sm text-ink-soft">
+        <section>
+          <h2 className="mb-2 font-display text-2xl">What&apos;s missing</h2>
+          <ul className="max-w-2xl list-disc space-y-1 pl-5 text-ink-soft">
             {ctx.missing.map((m) => (
               <li key={m}>{m}</li>
             ))}
           </ul>
-        </Card>
+        </section>
       )}
       <Disclaimer />
     </div>
@@ -151,8 +119,8 @@ async function InsightsContent() {
 export default function InsightsPage() {
   return (
     <div>
-      <PageHeader title="Health Insights">Your results and wearable data, with where each number came from.</PageHeader>
-      <Suspense fallback={<p className="text-ink-soft">Loading your data…</p>}>
+      <PageHeader title="Health insights">Every result is compared only with the range your lab printed. Tap a card for what it measures and the evidence behind it.</PageHeader>
+      <Suspense fallback={<p className="text-ink-soft">Loading your results…</p>}>
         <InsightsContent />
       </Suspense>
     </div>

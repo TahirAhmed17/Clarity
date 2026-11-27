@@ -8,10 +8,11 @@ A hybrid AI companion and health intelligence dashboard. You talk to a conversat
 
 ## Where we are (2026-11-27)
 
-- Repo: `TahirAhmed17/Clarity`. M1 is in [PR #1](https://github.com/TahirAhmed17/Clarity/pull/1) (`feat/m1-foundation` → `main`). M2 is on `feat/m2-health-intelligence`.
-- **Supabase GitHub integration** is connected to project `tothtmanjqtfgfzpginm`. *Preview branches are disabled*, so migrations only run against that project when a PR merges into `main`. They have been verified locally on Supabase's own Postgres 17 image.
-- The product owner asked for continuous building without per-milestone approval; stop only for blockers.
-- **Next: M3** (premium experience).
+- Repo: `TahirAhmed17/Clarity`. M1 and M2 are merged ([PR #1](https://github.com/TahirAhmed17/Clarity/pull/1), [PR #2](https://github.com/TahirAhmed17/Clarity/pull/2)). M3 is open as [PR #3](https://github.com/TahirAhmed17/Clarity/pull/3) → `main`.
+- **Supabase GitHub integration** is connected to project `tothtmanjqtfgfzpginm`. *Preview branches are disabled*, so migrations only run against that project when a PR merges into `main`. M1 and M2 migrations are live there (8, verified 2026-11-27). M3 adds `biomarker_corrections`, applied on merge.
+- The product owner builds continuously but **merges and deployments need their explicit approval**.
+- **Next:** M4 and M5 are proposed in IMPLEMENTATION_PLAN.md. The brief defines only M1–M3, so confirm their scope with the product owner.
+- **Local data caution:** the local Docker database contains a real lab report the product owner uploaded while testing. Never reset that database, and never display or copy its values. Test with `DATA_MODE=seed` (synthetic only).
 
 ## Confirmed product decisions (from the brief)
 
@@ -52,3 +53,14 @@ Hybrid companion + dashboard · orb + structured results · contextual interpret
 - The first evidence query in a fresh process loads the MiniLM model (~6 s cold, ~4 ms per query afterwards).
 - `drizzle-kit` brings in a dev-only `esbuild` advisory.
 - The biomarker parser has only been validated on synthetic layouts.
+
+## M3 decisions
+
+| Decision | Why |
+| --- | --- |
+| WebGL detection runs after mount (`useState` + `useEffect`), not via `useSyncExternalStore` with a server snapshot | The external-store version didn't reliably re-check after hydration; the orb stayed on the CSS fallback |
+| Orb shader includes `<colorspace_fragment>` and the Canvas uses `flat` | Without them the colours rendered muddy (linear output, tone mapping) |
+| Evidence references are resolved on the server for client components | Stops the corpus and its 150 KB of embeddings being bundled into the browser |
+| Number parsing distinguishes thousands from decimal commas | A real report showed `11,860` stored as 11.86 |
+| The reviewer gate uses a signed cookie plus an access code (not Supabase Auth yet) | Restricts the simulated workspace now; real clinician identity is M4.1 |
+| One shared PGlite per test file, reset between tests | Fixes the intermittent memory-exhaustion failures |

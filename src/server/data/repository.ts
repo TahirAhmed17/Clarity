@@ -3,6 +3,7 @@ import type {
   ActionPlan,
   EventRequest,
   SuggestionReview,
+  BiomarkerCorrectionInput,
   TimelineNote,
   Biomarker,
   ChatMessage,
@@ -40,6 +41,11 @@ export interface HealthRepository {
 
   listBiomarkers(profileId: string): Promise<Biomarker[]>;
   addBiomarkers(profileId: string, rows: NewBiomarker[]): Promise<Biomarker[]>;
+
+  /** User correction: recomputes parsed numbers, marks source user_provided, keeps the original values. */
+  correctBiomarker(profileId: string, biomarkerId: string, input: BiomarkerCorrectionInput): Promise<Biomarker | null>;
+  /** Deletes one uploaded document and every record derived from it. */
+  deleteDocument(profileId: string, documentId: string): Promise<boolean>;
 
   listWearableMetrics(profileId: string): Promise<WearableMetric[]>;
   /** Upserts daily aggregates (same profile/metric/day/aggregation/source replaces the old value). */

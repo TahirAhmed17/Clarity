@@ -1,0 +1,1 @@
+ALTER TABLE "biomarkers" ADD COLUMN "correction" jsonb;

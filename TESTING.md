@@ -20,6 +20,56 @@ npm run bench:retrieval # needs local Supabase + Qdrant on :6333
 npm run eval:engines    # engine evaluation; engines without keys are reported as skipped
 ```
 
+## Recorded results — M3 (2026-11-27, Windows 11, Node 22.17)
+
+| Check | Result |
+| --- | --- |
+| `tsc --noEmit`, `eslint` | ✅ 0 errors, 0 warnings |
+| `vitest run` | ✅ **71 / 71 passed**, 5 files; 5 consecutive clean runs on the final code |
+| `next build` | ✅ (includes `ƒ Proxy`) |
+| Browser checks | Production build, **seed mode (synthetic data only)**, see below |
+
+### The intermittent DB test: root cause (not a timeout)
+
+- Earlier a single Drizzle/PGlite test failed once in about five runs. I first raised its timeout to 90 s, which was **wrong**: under deliberate load the failures still happened, within 1–2 s, with `RangeError: Array buffer allocation failed` / `PGlite failed to initialize properly`.
+- **Cause:** the repository contract tests created a fresh in-process Postgres (a large WASM memory reservation) for every test and never closed them.
+- **Fix:** one shared instance per file, reset between tests (`resetDatabase`: truncate and reseed). The 90 s timeout was reverted.
+- **After the fix:** 8/8 normal runs pass, and **6/6 pass with two suites running in parallel**.
+- **Still possible:** with three full suites in parallel and only ~4 GB RAM free (Docker running two Supabase stacks), PGlite can still fail to allocate. That's an environment limit; CI runs one suite.
+
+### New tests (M3)
+
+- **Reviewer sessions:** sign/verify; tampered payload or signature; wrong secret; expired; non-reviewer role; garbage. A strong `SESSION_SECRET` is required in production. The access code is disabled unless configured and compared exactly. The rate limit is 5 attempts per minute.
+- **Proxy:** pages redirect to `/doctor/sign-in?next=…`; `/api/doctor/*` returns 401; a valid cookie passes and a tampered cookie is redirected.
+- **Real-world report layouts (synthetic values):** thousands separators (`7,450`), unit and range in one run, labelled ranges (`< 130 Optimal`), urine microscopy not mapped to blood codes, month-name dates, decimal commas.
+- **Unit conversions:** `cells/cmm`, `lakhs/cmm`, `μIU/mL`, `mm after 1hr`; number parsing (`11,860` = 11860, `5,2` = 5.2, `1234,567` treated as ambiguous).
+
+### Bug found by a real (user-uploaded) report, fixed with synthetic fixtures
+
+`11,860` was stored as **11.86**: the comma was read as a decimal point, so the value was 1000× too small. Fixed and regression-tested. No real values were copied into code or tests. Any report uploaded before this fix should be deleted and uploaded again.
+
+### Browser verification (production build, `DATA_MODE=seed`, synthetic data)
+
+| Page / flow | 390 px | Desktop | Observed |
+| --- | --- | --- | --- |
+| Landing | ✅ no overflow; steps static (no pin) | ✅ pin + step sequence (opacity 1 / 0.25 / 0.25 → progresses) | WebGL orb hero |
+| Home | ✅ | ✅ | WebGL orb after hydration; thread restored; colour-managed shader |
+| Insights | ✅ | ✅ | Cards, range rails, sparklines, wearable charts |
+| Body map | ✅ 2D first, then 3D once three.js loads | ✅ 3D figure | Selecting Kidneys updates the panel; evidence links |
+| Plan | ✅ no overflow | — | Next move on coral-tinted tide panel; "Mark done" → Done + Recent activity |
+| Profile | ✅ no overflow | — | Routine saved; synthetic Apple Health file deleted via two-step confirm; 3D switch persisted |
+| 3D off | ✅ | — | Body map falls back to the 2D SVG |
+| Reduce motion | ✅ | — | Orb uses the CSS version; animation duration ≈ 0 |
+| Doctor | ✅ | — | No session → `/doctor/sign-in?next=/doctor`. Over HTTP: wrong code 401, right code 200 + HttpOnly cookie, workspace "Signed in as Dr. Demo Reviewer (simulated)", review accepted, sign-out → redirect, 6th rapid attempt → 429 |
+
+Note: the browser pane was hidden during testing, so hydration and lazy chunks were throttled (5–20 s). Timings here are not representative of a visible tab.
+
+### Not tested yet (M3)
+
+- Real mobile hardware (only the 390 px emulation was used); GPU-less devices beyond the 3D-off switch.
+- Screen-reader pass (planned for M5).
+- Migrations from this branch on the hosted Supabase project (applied only when merged).
+
 ## Recorded results — M2 (2026-11-27, Windows 11, Node 22.17)
 
 | Check | Result |

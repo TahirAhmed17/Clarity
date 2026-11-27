@@ -6,7 +6,7 @@ import { getDataStatus, getRepository, resetRepository } from "@/server/data";
 import { SeedRepository } from "@/server/data/seed-repository";
 import type { HealthRepository } from "@/server/data/repository";
 import { resetEnvCache } from "@/server/config/env";
-import { createMigratedPglite } from "@/server/db/pglite";
+import { createMigratedPglite, resetDatabase } from "@/server/db/pglite";
 import { seedDatabase, tableCounts } from "@/server/db/seed";
 import { ingestBloodReport } from "@/server/ingestion/service";
 import { _scrubForTest } from "@/server/log";
@@ -88,10 +88,14 @@ function contract(name: string, make: () => Promise<HealthRepository>) {
 }
 
 contract("SeedRepository", async () => new SeedRepository());
+// One shared instance for the whole contract, reset to the seed before each test.
+let contractPg: Awaited<ReturnType<typeof createMigratedPglite>> | undefined;
+afterAll(async () => contractPg?.client.close());
 contract("DrizzleRepository (PGlite)", async () => {
-  const fresh = await createMigratedPglite();
-  await seedDatabase(fresh.db);
-  return new DrizzleRepository(fresh.db);
+  contractPg ??= await createMigratedPglite();
+  await resetDatabase(contractPg.client);
+  await seedDatabase(contractPg.db);
+  return new DrizzleRepository(contractPg.db);
 });
 
 describe("Row Level Security (Supabase policies on PGlite, auth.uid() stub)", () => {
@@ -154,5 +158,21 @@ describe("data mode resolution", () => {
 describe("logger", () => {
   it("drops non-allow-listed (potentially sensitive) fields", () => {
     expect(_scrubForTest({ count: 3, valueText: "13", description: "tired" } as never)).toEqual({ count: 3 });
+  });
+});
+
+describe("schema drift check", () => {
+  it("reports migrations the database hasn't applied, and stays silent without a tracking table", async () => {
+    const { EXPECTED_MIGRATIONS, missingMigrations } = await import("@/server/db/schema-check");
+    const { client, db } = await createMigratedPglite();
+    try {
+      // PGlite is migrated by Drizzle, so the Supabase tracking table doesn't exist → no false alarm.
+      expect(await missingMigrations(db)).toBeNull();
+      await client.exec(`create schema supabase_migrations; create table supabase_migrations.schema_migrations (version text primary key);`);
+      await client.query(`insert into supabase_migrations.schema_migrations (version) select unnest($1::text[])`, [EXPECTED_MIGRATIONS.slice(0, -1)]);
+      expect(await missingMigrations(db)).toEqual([EXPECTED_MIGRATIONS[EXPECTED_MIGRATIONS.length - 1]]);
+    } finally {
+      await client.close();
+    }
   });
 });

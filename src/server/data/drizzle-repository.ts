@@ -4,6 +4,7 @@ import type {
   ActionHistoryEntry,
   ActionPlan,
   SuggestionReview,
+  BiomarkerCorrectionInput,
   TimelineNote,
   Biomarker,
   ChatMessage,
@@ -16,6 +17,7 @@ import type {
   WearableMetric,
 } from "@/lib/domain";
 import * as s from "../db/schema";
+import { applyCorrection } from "../biomarkers/correction";
 import type { HealthRepository, NewDocument } from "./repository";
 
 export type ClarityDb = PgDatabase<PgQueryResultHKT, typeof s>;
@@ -54,6 +56,7 @@ const toBiomarker = (r: s.BiomarkerRow): Biomarker => ({
   source: r.source,
   confidence: r.confidence,
   pageNumber: r.pageNumber,
+  correction: r.correction ?? null,
 });
 
 const toWearable = (r: s.WearableMetricRow): WearableMetric => ({
@@ -159,6 +162,30 @@ export class DrizzleRepository implements HealthRepository {
       )
       .returning();
     return inserted.map(toBiomarker);
+  }
+
+  async correctBiomarker(profileId: string, biomarkerId: string, input: BiomarkerCorrectionInput) {
+    const [row] = await this.db.select().from(s.biomarkers).where(and(eq(s.biomarkers.id, biomarkerId), eq(s.biomarkers.profileId, profileId))).limit(1);
+    if (!row) return null;
+    const c = applyCorrection(toBiomarker(row), input);
+    const [u] = await this.db
+      .update(s.biomarkers)
+      .set({ ...c, valueNumeric: numStr(c.valueNumeric), refLow: numStr(c.refLow), refHigh: numStr(c.refHigh) })
+      .where(eq(s.biomarkers.id, biomarkerId))
+      .returning();
+    return toBiomarker(u);
+  }
+
+  async deleteDocument(profileId: string, documentId: string) {
+    return this.db.transaction(async (tx) => {
+      const where = and(eq(s.documents.id, documentId), eq(s.documents.profileId, profileId));
+      const [doc] = await tx.select({ id: s.documents.id }).from(s.documents).where(where).limit(1);
+      if (!doc) return false;
+      await tx.delete(s.biomarkers).where(and(eq(s.biomarkers.documentId, documentId), eq(s.biomarkers.profileId, profileId)));
+      await tx.delete(s.wearableMetrics).where(and(eq(s.wearableMetrics.documentId, documentId), eq(s.wearableMetrics.profileId, profileId)));
+      await tx.delete(s.documents).where(where);
+      return true;
+    });
   }
 
   async listWearableMetrics(profileId: string) {

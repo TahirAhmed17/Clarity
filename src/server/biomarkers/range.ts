@@ -20,8 +20,23 @@ export interface ParsedReference {
   understood: boolean;
 }
 
-const N = String.raw`(\d+(?:[.,]\d+)?)`;
-const toNum = (s: string) => Number(s.replace(",", "."));
+/** A number as printed on a lab report: "5.2", "5,2" (decimal comma) or "11,860" (thousands). */
+export const NUMBER_PATTERN = String.raw`(?:\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:[.,]\d+)?)`;
+const N = `(${NUMBER_PATTERN})`;
+
+/**
+ * Converts a printed number, distinguishing thousands separators from decimal commas:
+ *   "11,860" / "1,234,567.5" → thousands (11860)      "5,2" / "12,25" → decimal comma (5.2)
+ *   "1234,567" → ambiguous → NaN (caller keeps the text and warns rather than guessing)
+ */
+export function parsePrintedNumber(s: string): number {
+  const t = s.trim();
+  if (/^\d{1,3}(?:,\d{3})+(?:\.\d+)?$/.test(t)) return Number(t.replace(/,/g, ""));
+  if (/^\d+,\d{1,2}$/.test(t)) return Number(t.replace(",", "."));
+  if (/^\d+(?:\.\d+)?$/.test(t)) return Number(t);
+  return Number.NaN;
+}
+const toNum = parsePrintedNumber;
 
 /** Parses lab reference range text: "4.0 - 11.0", "< 3.0", "> 60", "<=5", "up to 40". */
 export function parseReference(text: string | null | undefined): ParsedReference {
@@ -40,7 +55,10 @@ export function parseReference(text: string | null | undefined): ParsedReference
 export function parseValue(text: string): { numeric: number | null; qualified: boolean } {
   const t = text.trim();
   const exact = t.match(new RegExp(`^${N}$`));
-  if (exact) return { numeric: toNum(exact[1]), qualified: false };
+  if (exact) {
+    const n = toNum(exact[1]);
+    return { numeric: Number.isNaN(n) ? null : n, qualified: false };
+  }
   if (/^[<>≤≥]=?\s*\d/.test(t)) return { numeric: null, qualified: true };
   return { numeric: null, qualified: false };
 }

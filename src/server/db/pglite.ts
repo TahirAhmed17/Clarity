@@ -27,6 +27,16 @@ const SUPABASE_AUTH_STUB = `
 `;
 
 /**
+ * Empties every application table so one PGlite instance can be reused across tests.
+ * (Each PGlite instance reserves a large WASM memory block; creating one per test exhausted
+ * memory under load — the cause of the old intermittent DB test failures.)
+ */
+export async function resetDatabase(client: PGlite) {
+  const { rows } = await client.query<{ tablename: string }>(`select tablename from pg_tables where schemaname = 'public'`);
+  if (rows.length) await client.exec(`truncate table ${rows.map((r) => `"public"."${r.tablename}"`).join(", ")} restart identity cascade;`);
+}
+
+/**
  * In-process Postgres (PGlite) with the real Supabase migrations applied.
  * Used by tests and `npm run db:verify`. Not used by the running app.
  */

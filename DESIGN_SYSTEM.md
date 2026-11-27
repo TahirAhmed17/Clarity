@@ -49,3 +49,36 @@ Rules:
 ## Reference mapping (for M3)
 
 Home → original orb identity · Insights → Core Medicine + Lably (hierarchy, attention indicators) · Biomarkers and Organs → BioTrack · Plan → Healthy + Oura · Wearables → Oura + Orbix · Doctor → Core Medicine + Lably · Landing → original editorial gradient identity. These are inspiration only: no copied layouts or assets.
+
+## M3 — what changed and why
+
+Principles applied (from a review against the brief):
+- **One bold element: the orb.** Everything around it stays quiet. Hierarchy comes from Fraunces at display sizes and from layout, not from boxes.
+- **Removed template tells:** uppercase tracked eyebrow labels, `A · B · C` metadata strings, and identical cards with identical shadows on everything.
+- **Tide panel** (`.tide`, `.tide-alert`): an organic layered gradient reserved for the next move. It turns coral-tinted when the move is "see a professional".
+- **Cards are for discrete objects** (a biomarker, an event). `raised` is used sparingly; lists use hairlines (`.hairline`).
+- **Range rail:** the lab's own range as a mint band, the value as a marker (coral-ink only when outside), with the status also given in text. It answers "where am I relative to my lab's range" without relying on colour alone.
+
+### Chart tokens (validated with the dataviz palette validator, light surface)
+
+| Token | Hex | Use |
+| --- | --- | --- |
+| `chart-mark` | #0A8F84 | Single-series marks (bars, lines, markers) |
+| `chart-alert` | #C24E3A | Out-of-range marker |
+| `chart-band` | #DCF0E2 | Lab reference band |
+| `chart-grid` | #E3EAE8 | Grid and tracks |
+
+Validator result: lightness band, chroma floor, CVD ΔE 10.9 and contrast ≥ 3:1 all pass. Charts are single-series (title names the series, so no legend). Each has hover/focus tooltips with hit targets larger than the marks, and a table view.
+
+### Motion
+
+- **Orb:** shader uniforms ease towards per-state targets. With reduced motion (OS setting or the Profile toggle) it becomes the static CSS orb.
+- **Landing:** a single orchestrated moment, the pinned "How it works" sequence, on desktop only.
+- **Framer Motion (`motion`)** is used only for expanding detail and new messages.
+
+### 3D and fallbacks
+
+| Feature | 3D | Fallback | Triggers fallback |
+| --- | --- | --- | --- |
+| Orb | R3F shader sphere | CSS gradient orb (same 5 states) | No WebGL, 3D off, reduced motion |
+| Body map | Stylised primitive figure, drag to rotate | 2D SVG silhouette, same markers | Same |

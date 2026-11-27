@@ -1,6 +1,6 @@
 import type { NewBiomarker } from "@/lib/domain";
 import { canonicalCode, normaliseName } from "../../biomarkers/aliases";
-import { parseReference, parseValue, rangeStatus } from "../../biomarkers/range";
+import { NUMBER_PATTERN, parseReference, parseValue, rangeStatus } from "../../biomarkers/range";
 import type { PdfPageLines } from "./extract-lines";
 
 export interface ParsedLabReport {
@@ -11,8 +11,13 @@ export interface ParsedLabReport {
   unparsedLines: string[];
 }
 
-const VALUE = String.raw`[<>≤≥]?=?\s?\d+(?:[.,]\d+)?`;
-const REF = String.raw`(?:(?:[<>≤≥]=?|up to)\s*\d+(?:[.,]\d+)?|\d+(?:[.,]\d+)?\s*(?:-|–|to)\s*\d+(?:[.,]\d+)?)`;
+const NUM = NUMBER_PATTERN;
+const VALUE = String.raw`[<>≤≥]?=?\s?${NUM}`;
+const REF = String.raw`(?:(?:[<>≤≥]=?|up to)\s*${NUM}|${NUM}\s*(?:-|–|to)\s*${NUM})`;
+/** "Cells/cmm 4000 - 11000": unit and range printed in one text run. */
+const UNIT_THEN_REF = new RegExp(String.raw`^(?<unit>[^\d<>≤≥\s][^\s]*(?:\s[^\d<>≤≥\s][^\s]*){0,2})\s+(?<ref>${REF})$`, "i");
+/** Urine microscopy units: never map these rows to blood-test codes (e.g. "Uric Acid /HPF" crystals). */
+const MICROSCOPY_UNIT = /^\/?\s*(hpf|lpf)\.?$/i;
 const FLAG = /^(H|L|HH|LL|HIGH|LOW|\*|A|ABN)$/i;
 const SPACE_ROW = new RegExp(
   String.raw`^(?<name>[A-Za-z][A-Za-z0-9 ()\/,.'+-]*?)\s+(?<value>${VALUE})\s+(?<unit>\S+)\s+(?<ref>${REF})(?:\s+(?<flag>H|L|HH|LL|HIGH|LOW|\*))?$`,
@@ -37,8 +42,15 @@ function splitRow(line: string): RowParts | null {
     let ref: string | null = null;
     let flag: string | null = null;
     for (const c of rest) {
+      const combined = c.match(UNIT_THEN_REF);
       if (!ref && parseReference(c).understood) ref = c;
       else if (!flag && FLAG.test(c)) flag = c;
+      else if (!unit && !ref && combined?.groups) {
+        unit = combined.groups.unit;
+        ref = combined.groups.ref;
+      } else if (!ref && (/^[<>≤≥]=?\s*\d/.test(c) || /^\d[\d.,]*\s*(?:-|–|to)\s*\d/.test(c))) {
+        ref = c; // range text with a label, e.g. "< 130 Optimal": kept, not interpreted (units like "10^9/L" don't match)
+      }
       else if (!unit) unit = c;
     }
     return { name, value, unit, ref, flag };
@@ -51,15 +63,41 @@ function splitRow(line: string): RowParts | null {
   return null;
 }
 
+const MONTHS: Record<string, number> = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, sept: 9, oct: 10, nov: 11, dec: 12 };
+
+/** Parses only unambiguous dates: ISO, or forms with a month NAME ("25/Nov/2026", "25 November 2026", "Nov 25, 2026"). */
+export function parseUnambiguousDate(text: string): { iso: string | null; ambiguous: string | null } {
+  const iso = text.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const valid = (y: number, m: number, d: number) => m >= 1 && m <= 12 && d >= 1 && d <= 31 && y >= 1900 && y <= 2100;
+  if (iso && valid(+iso[1], +iso[2], +iso[3])) return { iso: `${iso[1]}-${iso[2]}-${iso[3]}`, ambiguous: null };
+  const dmy = text.match(/\b(\d{1,2})[\s/.-]+([A-Za-z]{3,9})[\s/.,-]+(\d{4})\b/);
+  if (dmy) {
+    const m = MONTHS[dmy[2].toLowerCase().slice(0, dmy[2].toLowerCase().startsWith("sept") ? 4 : 3)];
+    if (m && valid(+dmy[3], m, +dmy[1])) return { iso: `${dmy[3]}-${pad(m)}-${pad(+dmy[1])}`, ambiguous: null };
+  }
+  const mdy = text.match(/\b([A-Za-z]{3,9})\s+(\d{1,2}),?\s+(\d{4})\b/);
+  if (mdy) {
+    const m = MONTHS[mdy[1].toLowerCase().slice(0, 3)];
+    if (m && valid(+mdy[3], m, +mdy[2])) return { iso: `${mdy[3]}-${pad(m)}-${pad(+mdy[2])}`, ambiguous: null };
+  }
+  const numeric = text.match(/\b(\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4})\b/);
+  return { iso: null, ambiguous: numeric ? numeric[1] : null };
+}
+
+const COLLECTED_LABEL = /(collected on|collection date|collection on|sample collected(?: on| date)?|sample date|date collected|specimen date|date of collection|collected)\s*[:\-]?\s*(.{0,40})/i;
+
 function findCollectedOn(lines: string[], warnings: string[]): string | null {
   for (const line of lines) {
-    const m = line.match(/(collected|collection date|sample date|date collected|specimen date)\s*[:\-]?\s*([0-9][0-9./-]{6,9})/i);
+    const m = line.replace(/\t/g, " ").match(COLLECTED_LABEL);
     if (!m) continue;
-    const raw = m[2];
-    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
-    // d/m/y vs m/d/y is ambiguous — never guess.
-    warnings.push(`Collection date "${raw}" is in an ambiguous format — please confirm it.`);
-    return null;
+    const { iso, ambiguous } = parseUnambiguousDate(m[2]);
+    if (iso) return iso;
+    if (ambiguous) {
+      // d/m/y vs m/d/y is ambiguous — never guess.
+      warnings.push(`Collection date "${ambiguous}" is in an ambiguous format — please confirm it.`);
+      return null;
+    }
   }
   warnings.push("No collection date found on the report — please add it so trends are dated correctly.");
   return null;
@@ -83,7 +121,8 @@ export function parseLabReport(pages: PdfPageLines[]): ParsedLabReport {
         if (canonicalCode(firstCol) && /\d/.test(line)) unparsedLines.push(line.replace(/\t/g, "  "));
         continue;
       }
-      const code = canonicalCode(row.name);
+      const code = row.unit && MICROSCOPY_UNIT.test(row.unit.trim()) ? null : canonicalCode(row.name);
+      if (/^\d{1,3}(,\d{3})+/.test(row.value.trim())) warnings.push(`${row.name}: "${row.value}" was read as a whole number with a thousands separator — please check it against the report.`);
       const ref = parseReference(row.ref);
       const value = parseValue(row.value);
       const status = rangeStatus(value.numeric, ref.low, ref.high);
