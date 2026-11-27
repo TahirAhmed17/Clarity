@@ -11,16 +11,19 @@ export interface DataStatus {
   reason: string;
 }
 
-type Resolved = Promise<{ repo: HealthRepository; status: DataStatus }>;
-
 /**
- * Stored on globalThis so route handlers and pages (which Next may load as separate
- * module instances) and dev hot-reloads share ONE repository — essential for the
- * in-memory seed fallback, where a second instance would silently lose uploads.
+ * Only state that must be shared is cached: the DB connection, or the in-memory seed store.
+ * It lives on globalThis so route handlers and pages (which Next may load as separate module
+ * instances) share it — otherwise seed-mode uploads would vanish between API and page.
+ * The Drizzle repository itself is stateless and built per call, so code changes always apply
+ * (a cached instance would keep stale methods across dev hot-reloads).
+ * Note: the in-memory SeedRepository is kept across hot reloads to preserve demo data;
+ * restart the dev server after editing seed-repository.ts.
  */
-const store = globalThis as typeof globalThis & { __clarityRepo?: Resolved };
+type Resolution = { status: DataStatus; db?: ClarityDb; seed?: SeedRepository };
+type Resolved = Promise<Resolution>;
 
-let resolved: Resolved | undefined = store.__clarityRepo;
+const store = globalThis as typeof globalThis & { __clarityData?: Resolved };
 
 async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -34,37 +37,43 @@ async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   }
 }
 
-async function resolveRepository(): Promise<{ repo: HealthRepository; status: DataStatus }> {
+async function resolveData(): Promise<Resolution> {
   const env = getEnv();
 
   if (env.DATA_MODE === "seed") {
-    return { repo: new SeedRepository(), status: { mode: "seed", reason: "DATA_MODE=seed" } };
+    return { seed: new SeedRepository(), status: { mode: "seed", reason: "DATA_MODE=seed" } };
   }
   if (!env.DATABASE_URL) {
     if (env.DATA_MODE === "database") throw new Error("DATA_MODE=database but DATABASE_URL is not set");
-    return { repo: new SeedRepository(), status: { mode: "seed", reason: "DATABASE_URL not set — using bundled synthetic seed data" } };
+    return { seed: new SeedRepository(), status: { mode: "seed", reason: "DATABASE_URL not set — using bundled synthetic seed data" } };
   }
 
   try {
     const db = createDb(env.DATABASE_URL, env.DATABASE_CONNECT_TIMEOUT_MS) as unknown as ClarityDb;
     await withTimeout(db.execute(sql`select 1`), env.DATABASE_CONNECT_TIMEOUT_MS);
-    return { repo: new DrizzleRepository(db), status: { mode: "database", reason: "Connected to Postgres" } };
+    return { db, status: { mode: "database", reason: "Connected to Postgres" } };
   } catch (err) {
     if (env.DATA_MODE === "database") throw err;
     const reason = `Database unreachable (${err instanceof Error ? err.message : "unknown error"}) — using bundled synthetic seed data`;
     log.warn("data.fallback", { reason });
-    return { repo: new SeedRepository(), status: { mode: "seed", reason } };
+    return { seed: new SeedRepository(), status: { mode: "seed", reason } };
   }
 }
 
-/** Resolves the repository once per server process. */
+/** Resolves the data source once per server process. */
 function ensureResolved(): Resolved {
-  resolved ??= store.__clarityRepo ??= resolveRepository();
-  return resolved;
+  store.__clarityData ??= resolveData();
+  return store.__clarityData;
 }
 
 export async function getRepository(): Promise<HealthRepository> {
-  return (await ensureResolved()).repo;
+  const r = await ensureResolved();
+  return r.db ? new DrizzleRepository(r.db) : r.seed!;
+}
+
+/** The Drizzle client when running in database mode (null in seed mode). */
+export async function getDatabase(): Promise<ClarityDb | null> {
+  return (await ensureResolved()).db ?? null;
 }
 
 export async function getDataStatus(): Promise<DataStatus> {
@@ -73,6 +82,5 @@ export async function getDataStatus(): Promise<DataStatus> {
 
 /** Test helper. */
 export function resetRepository() {
-  resolved = undefined;
-  store.__clarityRepo = undefined;
+  store.__clarityData = undefined;
 }

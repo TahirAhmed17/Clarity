@@ -10,6 +10,69 @@ npm run build        # production build
 
 Tests live in `tests/`. Database tests use **PGlite**, a real Postgres build running in-process. The same `supabase/migrations/` files that Supabase gets are applied there, so no credentials are needed.
 
+Additional M2 commands:
+
+```bash
+npx supabase db start   # local Supabase Postgres 17 (ports 553xx), applies supabase/migrations
+npm run db:migrate      # supabase db push to DATABASE_URL
+npm run db:seed
+npm run bench:retrieval # needs local Supabase + Qdrant on :6333
+npm run eval:engines    # engine evaluation; engines without keys are reported as skipped
+```
+
+## Recorded results — M2 (2026-11-27, Windows 11, Node 22.17)
+
+| Check | Result |
+| --- | --- |
+| `tsc --noEmit`, `eslint` | ✅ 0 errors, 0 warnings |
+| `vitest run` | ✅ **62 / 62 passed**, 4 files |
+| `next build` | ✅ |
+| Migrations on **real Supabase Postgres 17** (`supabase db start`) | ✅ all 8 migrations applied from scratch (`supabase db reset`), including pgvector in the `extensions` schema and every RLS migration |
+| RLS on real Supabase (`authenticated` role with JWT claims) | ✅ the owner sees only their 9 results and 1 profile; `anon` sees 0 health rows but can read the shared events |
+| Retrieval benchmark | ✅ see [docs/RETRIEVAL_BENCHMARK.md](docs/RETRIEVAL_BENCHMARK.md) |
+| Engine evaluation | Mock: 4/4 cases OK (correct flag, no dose in output, 0 unsupplied citations, next move matches). **Gemini and LingSante: skipped, no API keys.** |
+
+### New tests (M2)
+
+- **Evidence integrity**: every note cites a recorded https source with a date or date note; blocked sources are never cited; embeddings are in sync with the catalogue text; no doses in notes.
+- **Retrieval**: lexical retrieval plus filters; real MiniLM semantic retrieval on a paraphrased question; pgvector vector, full-text and filtered hybrid on Postgres.
+- **Biomarker intelligence**: SI/conventional conversions (creatinine, glucose, HbA1c affine formula, vitamin D, µg→ug); refuses ambiguous (urea mg/dL) and unknown units; implausible values, same-day conflicts, qualified values, missing ranges; cross-unit history with provenance; refuses unsafe comparisons.
+- **Organ systems**: partial or complete or no-data states, missing markers, next steps, evidence, no scores or diagnostic language; "Not enough data" rather than normal.
+- **Recommendations**: consolidated professional action first when flagged; safety-first even when lifestyle actions score higher, until marked done; uses goals and wearables; fallback; adaptation after two skips.
+- **AI turn**: citations are a subset of the supplied sources; deterministic next move; at most 3 supporting actions.
+- **Safety regression**: lab concentrations (`13 ug/L`, `124 g/L`, `38 U/L`) survive; doses (`65 mg a day`, `200 mg/day`) are removed.
+- **Supplements**: eligible categories only, once, no dose; approval requires a dose (zod); reject clears the dose; reviewer queue.
+- **Events**: personal ranking with explanation; mock booking.
+- **Plans and timeline**: supersede, complete or skip, history, adaptation, every timeline kind; Drizzle M2 operations on Postgres; **atomic profile + timeline update** (forced failure rolls back).
+
+### End-to-end synthetic journey: database mode against local Supabase (dev server)
+
+| Step | Observed |
+| --- | --- |
+| `/api/health` | `mode: database`, "Connected to Postgres" |
+| Upload synthetic PDF and Apple Health XML | 21 results (2026-10-14); 56 daily wearable values |
+| Ask "Why am I tired in the afternoons?" | Next move "Book a GP appointment to go through your flagged results" (safety first, 5 flagged); 3 supporting actions in distinct categories; 3 citations, all from the 8 supplied sources; question-specific sleep chunks retrieved through pgvector; 0 safety interventions |
+| Generate plan → complete primary, skip one supporting | Statuses saved; invalid body → 400; the next plan's primary moves to "Swap one lunch… fibre-rich option" |
+| Supplements | 3 pending categories (vitamin D, iron, soluble fibre), no doses; approve without dose → 400; approve with dose → `approved`, `simulated: true` |
+| Event request, then a duplicate | 201 mock request, then 409 |
+| Goal removed then re-added | Both logged in `health_timeline_events` |
+| Screens at 390 px | Body, Plan, Discover, Doctor, Timeline and Insights render database data; no horizontal scroll on Body |
+
+### Bugs found and fixed during M2 testing
+
+1. **Safety filter redacted lab values.** "13 ug/L" was treated as a dose. Found by the engine evaluation; fixed, with a regression test.
+2. **Professional review outranked.** A tiredness question let a lifestyle action outrank the flagged-results action. Now safety-first, with a test.
+3. **Question-specific evidence crowded out** by recommendation evidence. Fixed with a slot budget.
+4. **Non-atomic goal update.** A goal could change without its timeline note being written. Now transactional, with a test.
+5. **Stale instances on dev hot reload.** Cached repositories and retrievers kept old methods. Only state is cached now.
+6. **Advisor finding on production (M1)**: RLS helper functions were callable over RPC. Hardened in a new migration and verified on Supabase PG17 (see SECURITY.md).
+
+### Not tested yet (M2)
+
+- Live Gemini and LingSante calls (no keys).
+- Migrations on the hosted Supabase project (only runs once PR #1 merges into `main`; preview branches are disabled).
+- Retrieval quality on a larger, independently labelled query set.
+
 ## Recorded results — M1 checkpoint (2026-11-27, Windows 11, Node 22.17)
 
 All results below were produced in this environment. Nothing is estimated.

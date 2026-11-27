@@ -15,10 +15,14 @@
     "db:seed": "tsx scripts/db-seed.ts",
     "db:verify": "tsx scripts/db-verify.ts",
     "samples:generate": "tsx scripts/generate-samples.ts",
-    "check": "npm run typecheck && npm run lint && npm run test"
+    "check": "npm run typecheck && npm run lint && npm run test",
+    "evidence:embed": "tsx scripts/embed-evidence.ts",
+    "bench:retrieval": "tsx scripts/benchmark-retrieval.ts",
+    "eval:engines": "tsx scripts/eval-engines.ts"
   },
   "dependencies": {
     "@google/genai": "^3.6.1",
+    "@huggingface/transformers": "^4.3.2",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.4",
     "next": "16.4.6",

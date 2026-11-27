@@ -26,9 +26,13 @@ describe("migrations + seed on real Postgres (PGlite)", () => {
     const second = await seedDatabase(pg.db);
     const d = buildSeedDataset();
     expect(first).toMatchObject({ profiles: 2, biomarkers: d.biomarkers.length, events: d.events.length });
-    expect(Object.values(second).every((n) => n === 0)).toBe(true);
+    // Synthetic user data is insert-once; evidence is reference data and is upserted (refreshed), not duplicated.
+    const { evidence_chunks: refreshed, ...userData } = second;
+    expect(Object.values(userData).every((n) => n === 0)).toBe(true);
     const counts = await tableCounts(pg.db);
     expect(counts.wearable_metrics).toBe(d.wearableMetrics.length);
+    expect(counts.evidence_chunks).toBe(refreshed);
+    expect(counts.evidence_sources).toBe(22);
   });
 
   it("every demo profile is labelled synthetic and every event/catalogue item is SAMPLE", () => {

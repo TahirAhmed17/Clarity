@@ -41,3 +41,18 @@ Enums: `profile_role`, `document_kind`, `document_status`, `record_source`, `sug
 ## Seed
 
 `npm run db:seed` (or the in-memory fallback) loads: 1 synthetic member + 1 simulated reviewer, 1 historical report (9 results, 2026-04-08), 14 days × 5 wearable metrics, 2 symptoms, 5 catalogue items, 4 events. It is idempotent: fixed IDs + `on conflict do nothing`. The newer report (21 results, 2026-10-14) is **not** seeded. It is uploaded during the demo from `samples/synthetic-blood-report.pdf`.
+
+## M2 tables (added)
+
+| Table | Purpose | Notes |
+| --- | --- | --- |
+| `evidence_sources` | Verified source metadata: publisher, URL, dates as displayed, evidence class, limitations | Shared read-only (RLS: select for all) |
+| `evidence_chunks` | Paraphrased notes with tags (`biomarkers`, `systems`, `themes`), `vector(384)` embedding, generated `tsvector` | HNSW (cosine) + GIN indexes; upserted by the seed |
+| `action_history` | Completed or skipped plan actions, used for adaptation and the timeline | Owner-only RLS |
+| `health_timeline_events` | User-authored changes (goal added or removed, routine changed) | Owner-only RLS; written in the same transaction as the profile update |
+
+`action_plans.primary_action` and `supporting_actions` JSON now also carry `reasons[]` and `evidenceChunkIds[]`.
+
+Not tables, by design: `biomarker_definitions`, `organ_systems` and `biomarker_organ_mappings` are versioned reference data in `src/server/biomarkers/definitions.ts` and `src/server/systems/organ-systems.ts`.
+
+pgvector is installed in the `extensions` schema (Supabase convention; it's on the roles' search_path).

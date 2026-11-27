@@ -1,5 +1,7 @@
 import { sql } from "drizzle-orm";
+import { EVIDENCE_SOURCES } from "@/data/evidence/catalogue";
 import { buildSeedDataset } from "@/data/synthetic/dataset";
+import { EMBEDDINGS_MODEL, loadCorpus } from "../evidence/corpus";
 import type { ClarityDb } from "../data/drizzle-repository";
 import * as s from "./schema";
 
@@ -77,7 +79,24 @@ export async function seedDatabase(db: ClarityDb) {
     counts.events = ev.length;
   });
 
+  counts.evidence_chunks = await seedEvidence(db);
+
   return counts;
+}
+
+/** Upserts the curated evidence library (reference data, not synthetic user data). */
+export async function seedEvidence(db: ClarityDb) {
+  return db.transaction(async (tx) => {
+    for (const src of EVIDENCE_SOURCES) {
+      await tx.insert(s.evidenceSources).values(src).onConflictDoUpdate({ target: s.evidenceSources.id, set: { ...src } });
+    }
+    const chunks = loadCorpus();
+    for (const c of chunks) {
+      const row = { id: c.id, sourceId: c.sourceId, heading: c.heading, content: c.text, biomarkers: c.biomarkers, systems: c.systems, themes: c.themes, embedding: c.embedding, embeddingModel: c.embedding ? EMBEDDINGS_MODEL : null };
+      await tx.insert(s.evidenceChunks).values(row).onConflictDoUpdate({ target: s.evidenceChunks.id, set: row });
+    }
+    return chunks.length;
+  });
 }
 
 export async function tableCounts(db: ClarityDb) {
@@ -93,6 +112,9 @@ export async function tableCounts(db: ClarityDb) {
     "event_requests",
     "action_plans",
     "messages",
+    "evidence_sources",
+    "evidence_chunks",
+    "action_history",
   ];
   const out: Record<string, number> = {};
   for (const t of tables) {

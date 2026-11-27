@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { ButtonLink, Card, Disclaimer, EmptyState, PageHeader, ProvenanceTag, RangeBadge, SectionHeading } from "@/components/ui/primitives";
 import type { Biomarker } from "@/lib/domain";
 import { buildHealthContext } from "@/server/ai/context";
+import { validateBiomarkers } from "@/server/biomarkers/intelligence";
 import { rangeStatus } from "@/server/biomarkers/range";
 import { loadPageData } from "@/server/session";
 
@@ -38,6 +39,8 @@ async function InsightsContent() {
     latest.set(b.code ?? b.nameAsReported.toLowerCase(), b);
   }
   const rows = [...latest.values()];
+  // De-duplicate same message across repeat results; warnings first.
+  const issues = [...new Map(validateBiomarkers(biomarkers).map((i) => [i.message, i])).values()].sort((a, b) => (a.severity === b.severity ? 0 : a.severity === "warning" ? -1 : 1));
 
   return (
     <div className="grid gap-5">
@@ -113,6 +116,22 @@ async function InsightsContent() {
           </dl>
         )}
       </Card>
+
+      {issues.length > 0 && (
+        <Card>
+          <SectionHeading title="Data quality checks">Automatic checks on your records. They help catch unit, entry or extraction problems — they aren&apos;t health findings.</SectionHeading>
+          <ul className="space-y-1.5 text-sm">
+            {issues.map((i) => (
+              <li key={`${i.biomarkerId}-${i.code}`} className="flex gap-2">
+                <span aria-hidden className={i.severity === "warning" ? "text-coral-ink" : "text-ink-faint"}>
+                  {i.severity === "warning" ? "!" : "i"}
+                </span>
+                <span className="text-ink-soft">{i.message}</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       {ctx.missing.length > 0 && (
         <Card>
