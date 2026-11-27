@@ -11,7 +11,8 @@ Clarity is a personal health intelligence companion. It turns blood reports, wea
 
 - **M1 Foundation** ✅ ([PR #1](https://github.com/TahirAhmed17/Clarity/pull/1))
 - **M2 Health intelligence** ✅: curated evidence, pgvector retrieval, biomarker validation, organ systems, recommendations, supplements (simulated review), events, timeline
-- **M3 Premium experience**: next
+- **M3 Premium experience** ✅: 3D signature orb, conversational home, biomarker cards and charts, 3D body map, corrections and per-file deletion, restricted reviewer workspace, editorial landing page
+- **M4 / M5**: proposed (production readiness, quality and launch prep); see IMPLEMENTATION_PLAN.md
 
 See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md), [TESTING.md](TESTING.md) (actual results) and [CONTEXT.md](CONTEXT.md).
 
@@ -32,6 +33,9 @@ Demo flow:
 2. Open `/app/insights` to see extracted results compared with the lab's own ranges, plus 7-day wearable averages.
 3. On `/app`, ask "Give me an overview of my results".
 4. Try the bad files in `samples/invalid/` to see the error handling.
+5. Reviewer workspace: set `REVIEWER_ACCESS_CODE` (and `SESSION_SECRET` in production) in `.env.local`, then open `/doctor`. It is simulated and labelled as such.
+
+To test with synthetic data only, even when a database is configured: `DATA_MODE=seed npm run dev`.
 
 ## Using Supabase
 

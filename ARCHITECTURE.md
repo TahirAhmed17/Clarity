@@ -126,3 +126,21 @@ The engine explains; it does not choose. Deterministic layers (validation, range
 | `POST /api/doctor/suggestions/[id]` | Simulated review (role-checked) |
 | `POST /api/events/[id]/request` | Mock booking request (duplicate → 409) |
 | `PATCH /api/profile` | Goals and routine; changes logged atomically to the timeline |
+
+## M3 additions
+
+```
+src/proxy.ts                     optimistic gate for /doctor and /api/doctor/* (Next 16 proxy)
+src/server/auth/reviewer-session signed reviewer session (Web Crypto HMAC), access code, rate limit
+src/components/orb/              Orb (mode switch) + orb-canvas (R3F shader, lazy)
+src/components/body/             body-map (3D/2D switch), body-canvas (R3F), body-explorer (selection + detail)
+src/components/charts/           range-rail, sparkline, daily-chart (validated chart tokens)
+src/components/landing/          how-it-works (the single GSAP moment)
+src/lib/preferences.ts           display preferences, reduced motion, WebGL detection (client)
+src/server/insights/view-model   server-built, serializable card data (evidence resolved server-side)
+src/server/biomarkers/correction user corrections that keep the original reading
+```
+
+Rule kept from M2: client components never import server modules (only `import type`), so the evidence corpus and embeddings never ship to the browser. Server pages resolve evidence into display references first.
+
+New routes: `PATCH /api/biomarkers/[id]`, `DELETE /api/documents/[id]`, `GET /api/messages`, `POST|DELETE /api/doctor/session`.

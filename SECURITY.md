@@ -42,3 +42,16 @@
 - **New routes** validate input with zod and return safe errors; the mock booking makes no external calls.
 - **RLS** covers every new table and was verified on the real Supabase Postgres image.
 - **Supabase security advisor (2026-11-27)**: after M1 reached production, the advisor flagged the RLS helper functions (`SECURITY DEFINER` in the exposed `public` schema) as callable through `/rest/v1/rpc` by `anon` and `authenticated`. Migration `*_harden_rls_helpers.sql` moves them to a non-exposed `private` schema, executable only by `authenticated`, and scopes the user-data policies `to authenticated`. Verified on Supabase PG17: the owner sees only their own rows; `anon` gets empty results (no error) and can't execute the helpers. The remaining advisor finding, `public.rls_auto_enable()`, is a Supabase-managed function, not part of this repo.
+
+## M3 additions
+
+- **Reviewer workspace is now restricted.**
+  - `/doctor` and `/api/doctor/*` require a signed, HttpOnly, SameSite=Lax session cookie (HMAC-SHA256, 8 h). It's issued only after a timing-safe comparison against `REVIEWER_ACCESS_CODE` (min 8 chars). There's no default code: unset means closed.
+  - Sign-in is rate-limited (5 per minute per IP, in-memory).
+  - `SESSION_SECRET` (≥ 32 chars) is required in production; development uses a random per-process secret.
+  - `proxy.ts` is only the optimistic first check. The page and the review API re-verify the session **and** the profile's `reviewer` role.
+  - Sign-in redirects only to same-site `/doctor…` paths, so there's no open redirect.
+- **Corrections keep provenance:** a corrected value becomes `user_provided`, with the original extracted reading stored in `biomarkers.correction`.
+- **Per-file deletion** removes the document and every record derived from it, in one transaction.
+- **Display preferences** live only in the browser (localStorage, guarded) and contain no health data.
+- **Remaining gap:** member authentication is still the synthetic demo profile (M4.1, Supabase Auth). The shared reviewer code is a demo mechanism, not clinician identity.
