@@ -8,8 +8,8 @@ A hybrid AI companion and health intelligence dashboard. You talk to a conversat
 
 ## Where we are (2026-11-27)
 
-- Repo: `TahirAhmed17/Clarity`. M1 is merged ([PR #1](https://github.com/TahirAhmed17/Clarity/pull/1)). M2 is open as [PR #2](https://github.com/TahirAhmed17/Clarity/pull/2) (not merged). M3 is on `feat/m3-premium-experience`, stacked on M2.
-- **Supabase GitHub integration** is connected to project `tothtmanjqtfgfzpginm`. *Preview branches are disabled*, so migrations only run against that project when a PR merges into `main`. Only M1's migrations are live there; M2 and M3 migrations are verified locally (Supabase PG17 image and PGlite).
+- Repo: `TahirAhmed17/Clarity`. M1 and M2 are merged ([PR #1](https://github.com/TahirAhmed17/Clarity/pull/1), [PR #2](https://github.com/TahirAhmed17/Clarity/pull/2)). M3 is open as [PR #3](https://github.com/TahirAhmed17/Clarity/pull/3) → `main`.
+- **Supabase GitHub integration** is connected to project `tothtmanjqtfgfzpginm`. *Preview branches are disabled*, so migrations only run against that project when a PR merges into `main`. M1 and M2 migrations are live there (8, verified 2026-11-27). M3 adds `biomarker_corrections`, applied on merge.
 - The product owner builds continuously but **merges and deployments need their explicit approval**.
 - **Next:** M4 and M5 are proposed in IMPLEMENTATION_PLAN.md. The brief defines only M1–M3, so confirm their scope with the product owner.
 - **Local data caution:** the local Docker database contains a real lab report the product owner uploaded while testing. Never reset that database, and never display or copy its values. Test with `DATA_MODE=seed` (synthetic only).
