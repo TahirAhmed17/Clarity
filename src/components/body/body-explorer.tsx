@@ -107,10 +107,10 @@ export function BodyExplorer({ insights }: { insights: SystemView[] }) {
         )}
         {s.dataState !== "none" && (
           <Link
-            href={`/app?q=${encodeURIComponent(`What do my ${s.system.name.toLowerCase()} results mean?`)}`}
+            href={`/app?q=${encodeURIComponent(`What do my results for ${s.system.name.toLowerCase()} mean?`)}`}
             className="mt-6 inline-block text-sm font-semibold text-teal-ink underline decoration-teal/40 underline-offset-4"
           >
-            Ask Clarity about my {s.system.name.toLowerCase()} results
+            Ask Clarity about these results
           </Link>
         )}
       </section>

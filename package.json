@@ -18,7 +18,8 @@
     "check": "npm run typecheck && npm run lint && npm run test",
     "evidence:embed": "tsx scripts/embed-evidence.ts",
     "bench:retrieval": "tsx scripts/benchmark-retrieval.ts",
-    "eval:engines": "tsx scripts/eval-engines.ts"
+    "eval:engines": "tsx scripts/eval-engines.ts",
+    "demo": "tsx scripts/demo.ts"
   },
   "dependencies": {
     "@google/genai": "^3.6.1",

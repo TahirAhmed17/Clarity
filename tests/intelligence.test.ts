@@ -149,6 +149,13 @@ describe("M2.4 biomarker intelligence", () => {
     expect(codes).toEqual(expect.arrayContaining(["implausible_value", "conflicting_same_day", "qualified_value", "missing_range"]));
   });
 
+  it("warns when the printed flag contradicts the range, but not after the user corrects the value", () => {
+    const asRead = bm({ code: "FERRITIN", nameAsReported: "Ferritin", valueNumeric: 16, valueText: "16", unitAsReported: "ug/L", refText: "15 - 150", refLow: 15, refHigh: 150, flagAsReported: "L" });
+    expect(validateBiomarkers([asRead]).map((i) => i.code)).toContain("flag_range_mismatch");
+    const corrected = { ...asRead, source: "user_provided" as const, correction: { original: { valueText: "13", unitAsReported: "ug/L", refText: "15 - 150", source: "extracted" as const }, correctedAt: "2026-11-27T00:00:00Z" } };
+    expect(validateBiomarkers([corrected]).map((i) => i.code)).not.toContain("flag_range_mismatch");
+  });
+
   it("computes history across different units, with provenance, and refuses unsafe comparisons", () => {
     const h = biomarkerHistories([
       bm({ code: "CREATININE", nameAsReported: "Creatinine", valueNumeric: 0.8, valueText: "0.8", unitAsReported: "mg/dL", observedOn: "2025-01-01", documentId: "doc-a" }),
@@ -232,6 +239,15 @@ describe("M2.7 recommendation engine", () => {
     });
     expect(skipped.primary.id).not.toBe(before);
     expect(skipped.all.find((x) => x.id === before)!.reasons.join(" ")).toMatch(/skipped/);
+  });
+
+  it("adapts a little after a single skip, and says so", () => {
+    const input: RecInput = { ...base, goals: ["Sleep more consistently"], wearables: [{ metric: "sleep_asleep", avg7d: 380 }] };
+    const first = recommend(input).all[0];
+    const once = recommend({ ...input, history: [{ actionId: first.id, category: first.category, outcome: "skipped", at: "2026-11-20" }] });
+    const after = once.all.find((x) => x.id === first.id)!;
+    expect(after.score).toBe(Math.round((first.score - 1) * 100) / 100);
+    expect(after.reasons.join(" ")).toMatch(/skipped it last time/);
   });
 });
 

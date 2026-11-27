@@ -87,6 +87,10 @@ export function Companion({ initialMessages, greeting, initialQuestion }: { init
   useEffect(() => {
     if (initialQuestion && !asked.current) {
       asked.current = true;
+      // Drop ?q= from the address bar so a refresh doesn't ask the same question again.
+      const url = new URL(window.location.href);
+      url.searchParams.delete("q");
+      window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
       void ask(initialQuestion);
     }
   }, [initialQuestion, ask]);

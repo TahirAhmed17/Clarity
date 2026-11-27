@@ -60,7 +60,7 @@ async function InsightsContent() {
                   Ask Clarity to explain these
                 </Link>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {flagged.map((b) => (
                   <BiomarkerCard key={b.key} b={b} />
                 ))}
@@ -74,7 +74,7 @@ async function InsightsContent() {
             return (
               <section key={group} aria-label={group}>
                 <h2 className="mb-4 font-display text-2xl">{group}</h2>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {rows.map((b) => (
                     <BiomarkerCard key={b.key} b={b} />
                   ))}

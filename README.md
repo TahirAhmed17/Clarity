@@ -37,6 +37,8 @@ Demo flow:
 
 To test with synthetic data only, even when a database is configured: `DATA_MODE=seed npm run dev`.
 
+**Presenting a demo:** `npm run demo` builds if needed, starts a production server on http://localhost:3200 with synthetic data only, warms up the embedding model and AI engine, and pre-renders every page. Between run-throughs use **Profile → Reset demo**. The full walkthrough, fallbacks and likely questions are in [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md).
+
 ## Using Supabase
 
 ```bash
@@ -52,6 +54,7 @@ Migrations (including Row Level Security) live in `supabase/migrations/`, which 
 | Script | Purpose |
 | --- | --- |
 | `npm run dev` / `build` / `start` | Next.js |
+| `npm run demo` | One-command demo: build, start on :3200 in seed mode, warm up, pre-render (`--port`, `--rebuild`, `--database`) |
 | `npm run check` | typecheck + lint + tests |
 | `npm test` | Vitest suite (includes migrations on in-process Postgres via PGlite) |
 | `npm run db:verify` | Apply migrations + seed to PGlite and print table counts (no credentials needed) |
@@ -64,6 +67,7 @@ Migrations (including Row Level Security) live in `supabase/migrations/`, which 
 
 ## Documentation
 
+- [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) — how to present the demo
 - [CONTEXT.md](CONTEXT.md) — project brain: decisions, constraints, current state
 - [ARCHITECTURE.md](ARCHITECTURE.md) — structure, service boundaries, flows
 - [DATA_MODEL.md](DATA_MODEL.md) — schema and rationale

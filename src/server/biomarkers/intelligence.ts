@@ -51,7 +51,8 @@ export function validateBiomarkers(rows: Biomarker[]): ValidationIssue[] {
     else if (b.refLow === null && b.refHigh === null) push(b, "range_not_interpreted", "info", `The range "${b.refText}" for ${b.nameAsReported} was kept as text but couldn't be interpreted.`);
     if (!b.observedOn) push(b, "missing_date", "warning", `${b.nameAsReported} has no collection date, so it can't be placed on your timeline accurately.`);
     const st = rangeStatus(b.valueNumeric, b.refLow, b.refHigh);
-    const flag = b.flagAsReported?.toUpperCase();
+    // The printed flag describes the value as first read; after a user correction it no longer applies.
+    const flag = b.correction ? undefined : b.flagAsReported?.toUpperCase();
     if (flag && /^(H|HH|HIGH)$/.test(flag) && st === "within") push(b, "flag_range_mismatch", "warning", `${b.nameAsReported} is flagged high on the report but is within the printed range.`);
     if (flag && /^(L|LL|LOW)$/.test(flag) && st === "within") push(b, "flag_range_mismatch", "warning", `${b.nameAsReported} is flagged low on the report but is within the printed range.`);
   }

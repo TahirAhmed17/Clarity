@@ -87,7 +87,7 @@ const CANDIDATES: Candidate[] = [
       goalWords: /energ|cholesterol|fit|active|weight/i,
       symptomWords: /tired|fatigue|energy/i,
       questionWords: /exercise|walk|activ|energy|tired/i,
-      wearable: (w) => ((w.get("steps") ?? Infinity) < 7000 ? `your steps average about ${Math.round(w.get("steps")!)} a day` : null),
+      wearable: (w) => ((w.get("steps") ?? Infinity) < 7000 ? `your steps average about ${Math.round(w.get("steps")!).toLocaleString("en-GB")} a day` : null),
     },
   },
   {
@@ -223,6 +223,9 @@ export function recommend(input: RecInput): { primary: Recommendation; supportin
     if (skippedThis >= 2) {
       score -= 2;
       reasons.push("lowered because you skipped it recently");
+    } else if (skippedThis === 1) {
+      score -= 1;
+      reasons.push("lowered a little because you skipped it last time");
     } else if (skippedCategory >= 3) {
       score -= 1;
       reasons.push(`lowered because ${c.category} actions were skipped recently`);
