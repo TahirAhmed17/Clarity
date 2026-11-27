@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { getRepository } from "@/server/data";
 import { errorResponse, json } from "@/server/http";
-import { getSimulatedReviewer } from "@/server/session";
+import { getReviewer } from "@/server/session";
 import { ReviewSchema } from "@/server/supplements/service";
 
 /** POST a SIMULATED review: approved (dose required) | changed | rejected. */
@@ -13,8 +13,8 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/doctor/
   }
   try {
     const repo = await getRepository();
-    const reviewer = await getSimulatedReviewer(repo);
-    if (!reviewer) return json({ error: { code: "forbidden", message: "Reviewer role required." } }, 403);
+    const reviewer = await getReviewer(repo);
+    if (!reviewer) return json({ error: { code: "unauthorized", message: "Reviewer sign-in required." } }, 401);
     const updated = await repo.reviewSuggestion(id, reviewer.id, parsed.data);
     if (!updated) return json({ error: { code: "not_found", message: "Suggestion not found." } }, 404);
     return json({ suggestion: updated, simulated: true });

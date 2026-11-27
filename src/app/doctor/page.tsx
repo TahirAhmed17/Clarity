@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import { PostButton } from "@/components/features/post-button";
 import { ReviewForm } from "@/components/features/review-form";
 import { Badge, ButtonLink, Card, EmptyState, PageHeader } from "@/components/ui/primitives";
-import { getSimulatedReviewer, loadPageData } from "@/server/session";
+import { getReviewer, loadPageData } from "@/server/session";
 
 export const metadata: Metadata = { title: "Reviewer workspace (simulated)" };
 
@@ -10,8 +12,9 @@ const STATUS_TONE = { pending: "mist", approved: "teal", changed: "lime", reject
 
 async function Queue() {
   const { repo } = await loadPageData();
-  const reviewer = await getSimulatedReviewer(repo);
-  if (!reviewer) return <EmptyState title="Reviewer role required" />;
+  // Verified here as well as in proxy.ts: signed session AND reviewer role.
+  const reviewer = await getReviewer(repo);
+  if (!reviewer) redirect("/doctor/sign-in?next=/doctor");
   const [queue, catalogue] = await Promise.all([repo.listSuggestionsForReview(), repo.listSupplementCatalogue()]);
   if (queue.length === 0) {
     return (
@@ -21,6 +24,11 @@ async function Queue() {
     );
   }
   return (
+    <div className="space-y-4">
+    <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-ink-soft">
+      <span>Signed in as {reviewer.displayName}</span>
+      <PostButton url="/api/doctor/session" method="DELETE" label="Sign out" variant="secondary" className="h-9" />
+    </div>
     <div className="grid gap-4 md:grid-cols-2">
       {queue.map((s) => {
         const item = catalogue.find((c) => c.id === s.catalogueId);
@@ -46,6 +54,7 @@ async function Queue() {
           </Card>
         );
       })}
+    </div>
     </div>
   );
 }

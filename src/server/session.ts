@@ -1,5 +1,7 @@
+import { cookies } from "next/headers";
 import { connection } from "next/server";
-import { DEMO_PROFILE_ID, DEMO_REVIEWER_ID } from "@/data/synthetic/dataset";
+import { REVIEWER_COOKIE, sessionSecret, verifySession } from "./auth/reviewer-session";
+import { DEMO_PROFILE_ID } from "@/data/synthetic/dataset";
 import { getEnv } from "./config/env";
 import { getDataStatus, getRepository } from "./data";
 
@@ -20,10 +22,13 @@ export async function loadPageData() {
 }
 
 /**
- * SIMULATED reviewer identity for the demo Doctor workspace. Returns the reviewer profile only if
- * its role is actually "reviewer". M3.8 replaces this with authenticated, role-restricted access.
+ * The signed-in (SIMULATED) reviewer, or null. Requires BOTH a valid signed reviewer session cookie
+ * AND a profile whose role is "reviewer" — proxy.ts is only an optimistic first check.
  */
-export async function getSimulatedReviewer(repo: { getProfile(id: string): Promise<import("@/lib/domain").Profile | null> }) {
-  const p = await repo.getProfile(DEMO_REVIEWER_ID);
+export async function getReviewer(repo: { getProfile(id: string): Promise<import("@/lib/domain").Profile | null> }) {
+  const token = (await cookies()).get(REVIEWER_COOKIE)?.value;
+  const session = await verifySession(token, sessionSecret());
+  if (!session) return null;
+  const p = await repo.getProfile(session.sub);
   return p && p.role === "reviewer" ? p : null;
 }
